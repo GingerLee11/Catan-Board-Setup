@@ -2,6 +2,7 @@
 # catan_board.py - Tile and Catan Board classes. Set up a balanced catan board given proper inputs.
 
 from string import ascii_uppercase
+from math import floor
 
 
 class Tile:
@@ -83,23 +84,15 @@ class CatanIsland:
         diff = max_width - min_width
         vertical = diff * 2
         horizontal = max_width + (max_width - 1)
-        offset = diff
-        for y in range(vertical):
-            # Create the board offsets 
-            # Since the island is a hexagon
-            if y <= diff and y != 0:
-                offset -= 1
-            elif y > diff:
-                offset += 1
+        for y in range(vertical + 1):
             row = []
 
             # TODO: Create empty tiles so that the tiles line up properly
 
-            for x in range(offset, horizontal - offset, 2):
+            for x in range(0, horizontal, 1):
                 pos = f'{letters[y]}{x}'
                 tile = Tile(x, y, pos)
-                row.append(tile)
-                self.position_dict[tile.pos] = tile     
+                row.append(tile)    
             grid.append(row)
                  
 
@@ -119,76 +112,83 @@ class CatanIsland:
         offset = diff
         horizontal = self.max_width + (self.max_width - 1)
 
-        for tile in self.position_dict.values():
-            # Define the coordinates
-            x = tile.x
-            y = tile.y
+        for y in range(len(grid)):
+            # Create the board offsets 
+            # Since the island is a hexagon
+            if y <= diff and y != 0:
+                offset -= 1
+            elif y > diff:
+                offset += 1
+            for x in range(offset, horizontal - offset, 2):
 
-            # There are no top_left or top_right tiles
-            if y == 0:
-                tile.bottom_left = grid[y + 1][x - 1]
-                tile.bottom_right = grid[y + 1][x + 1]
-                # On the far left side
-                if x <= offset:
-                    tile.right = grid[y][x + 2]
-                # On the far right side
-                elif x >= horizontal - offset:
-                    tile.left = grid[y][x - 2]
-                else:
-                    tile.right = grid[y][x + 2]
-                    tile.left = grid[y][x - 2]
+                tile = grid[y][x]
 
-            # If the tile is at the bottom of the board
-            elif y == len(grid) -  1:
-                tile.top_left = grid[y - 1][x - 1]
-                tile.top_right = grid[y - 1][x + 1]
-                # On the far left side
-                if x <= offset:
-                    tile.right = grid[y][x + 2]
-                # On the far right side
-                elif x >= horizontal - offset:
-                    tile.left = grid[y][x - 2]
-                else:
-                    tile.right = grid[y][x + 2]
-                    tile.left = grid[y][x - 2]
-
-            # If the tile is at the far left side, but not top or bottom
-            elif x <= offset:
-                tile.right = grid[y][x + 2]
-                tile.top_right = grid[y - 1][x + 1]
-                tile.bottom_right = grid[y + 1][x + 1]
-                # Only include the top_left tile if 
-                # more than halfway down the board
-                if y > len(grid) / 2:
-                    tile.top_left = grid[y - 1][x - 1]
-
-            elif x >= horizontal - offset:
-                tile.right = grid[y][x + 2]
-                tile.top_right = grid[y - 1][x + 1]
-                tile.bottom_right = grid[y + 1][x + 1]
-                # Only include the top_left tile if 
-                # less than halfway down the board
-                if y <= len(grid) / 2:
+                # There are no top_left or top_right tiles
+                if y == 0:
+                    tile.bottom_left = grid[y + 1][x - 1]
                     tile.bottom_right = grid[y + 1][x + 1]
+                    # On the far left side
+                    if x <= diff:
+                        tile.right = grid[y][x + 2]
+                    # On the far right side
+                    elif x >= horizontal - diff:
+                        tile.left = grid[y][x - 2]
+                    else:
+                        tile.right = grid[y][x + 2]
+                        tile.left = grid[y][x - 2]
 
-            else:
-                tile.right = grid[y][x + 2]
-                tile.top_right = grid[y - 1][x + 1]
-                tile.bottom_right = grid[y + 1][x + 1]
-                tile.right = grid[y][x + 2]
-                tile.top_right = grid[y - 1][x + 1]
-                tile.bottom_right = grid[y + 1][x + 1]
-                
+                # If the tile is at the bottom of the board
+                elif y == len(grid) -  1:
+                    tile.top_left = grid[y - 1][x - 1]
+                    tile.top_right = grid[y - 1][x + 1]
+                    # On the far left side
+                    if x <= diff:
+                        tile.right = grid[y][x + 2]
+                    # On the far right side
+                    elif x >= horizontal - diff:
+                        tile.left = grid[y][x - 2]
+                    else:
+                        tile.right = grid[y][x + 2]
+                        tile.left = grid[y][x - 2]
 
-            tile.possible_adjacents = tile._check_possible_adjacents()
-            self.position_dict[tile.pos] = tile
+                # If the tile is at the far left side, but not top or bottom
+                elif x <= diff:
+                    tile.right = grid[y][x + 2]
+                    tile.top_right = grid[y - 1][x + 1]
+                    tile.bottom_right = grid[y + 1][x + 1]
+                    # Only include the top_left tile if 
+                    # more than halfway down the board
+                    if y > len(grid) / 2:
+                        tile.top_left = grid[y - 1][x - 1]
+
+                # Tile on the far right side, but not top or bottom
+                elif x >= horizontal - diff:
+                    tile.left = grid[y][x - 2]
+                    tile.top_left = grid[y - 1][x - 1]
+                    tile.bottom_left = grid[y + 1][x - 1]
+                    # Only include the top_left tile if 
+                    # less than halfway down the board
+                    if y < floor(len(grid) / 2):
+                        tile.bottom_right = grid[y + 1][x + 1]
+
+                else:
+                    tile.right = grid[y][x + 2]
+                    tile.top_right = grid[y - 1][x + 1]
+                    tile.bottom_right = grid[y + 1][x + 1]
+                    tile.left = grid[y][x - 2]
+                    tile.top_left = grid[y - 1][x - 1]
+                    tile.bottom_left = grid[y + 1][x - 1]
+                    
+
+                tile.possible_adjacents = tile._check_possible_adjacents()
+                self.position_dict[tile.pos] = tile
 
         return grid
 
 
 def example():
 
-    catan = CatanIsland(5, 3, {}, {}, {})
+    catan = CatanIsland(6, 3, {}, {}, {})
     
 
 
