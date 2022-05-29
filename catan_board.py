@@ -3,6 +3,8 @@
 
 from string import ascii_uppercase
 from math import floor
+from random import randint
+from collections import deque
 
 
 class Tile:
@@ -61,7 +63,7 @@ class CatanIsland:
         # Constants
         self.letters = list(ascii_uppercase)
         
-        # Reference variables
+        # Position dictionary
         self.position_dict = {}
         
         # inputs
@@ -70,6 +72,11 @@ class CatanIsland:
         self.resources = resource_dict
         self.numbers = numbers_dict
         self.convert_num_to_pts = num_to_pts_dict
+
+        # Reference variables
+        self.diff = self.max_width - self.min_width
+        self.vertical = self.diff * 2
+        self.horizontal = self.max_width + (self.max_width - 1)
 
         # Create the island:
         self.island = self._create_island()
@@ -86,9 +93,6 @@ class CatanIsland:
         horizontal = max_width + (max_width - 1)
         for y in range(vertical + 1):
             row = []
-
-            # TODO: Create empty tiles so that the tiles line up properly
-
             for x in range(0, horizontal, 1):
                 pos = f'{letters[y]}{x}'
                 tile = Tile(x, y, pos)
@@ -182,13 +186,84 @@ class CatanIsland:
 
                 tile.possible_adjacents = tile._check_possible_adjacents()
                 self.position_dict[tile.pos] = tile
+        
+        # Place resources on the board:
+        self._place_resources(self.resources)
 
         return grid
+
+    
+    def _place_resources(self, resources_dict):
+        """
+        Places the resources in a balanced manner on the board
+        given a dictionary containing the amount of each resource.
+
+        Rules for a balanced board (from a resource perspective):
+        - No more than two resouces of the same kind next to one another.
+        """
+        resources = [resource for resource in resources_dict.keys()]
+        for tile in self.position_dict.values():
+
+            while tile.resource == None:
+
+                resource_indx = randint(0, len(resources) - 1)
+                resource = resources[resource_indx]
+                if resources_dict[resource] == 0:
+                    resources_dict.pop(resource)
+                    resources.pop(resource_indx)
+                    continue
+                else:
+                    resources_dict[resource] -= 1
+
+                # Find our how many of that resource is already adjacent
+                num_adj = 0
+                for adj in tile.possible_adjacents:
+                    if adj.resource == resource:
+                        num_adj += 1
+                
+                if num_adj < 2:
+                    tile.resource = resource
+                else:
+                    if resource in resources_dict:
+                        resources_dict[resource] += 1
+                    else:
+                        resources_dict[resource] = 1
+                        resources.append(resource)
+
+
+    def print_resources(self):
+
+        island = self.island
+
+        horizontal_line_segment = '___'
+        horizontal_line = horizontal_line_segment * self.horizontal
+        print()
+
+        for y in range(len(island)):
+            for x in range(len(island[0])):
+                tile = island[y][x]
+                if tile.resource != None:
+                    print(f'| {tile.resource[0]} |', end='')
+                else:
+                    print(f'  ', end='')
+            
+            print(f'\n{horizontal_line}')
+
 
 
 def example():
 
-    catan = CatanIsland(6, 3, {}, {}, {})
+    three_four_player_resources = {
+        'Brick': 3,
+        'Wood': 4,
+        'Ore': 3,
+        'Grain': 4,
+        'Sheep': 4,
+        'Desert': 1,
+    }
+
+    catan = CatanIsland(5, 3, three_four_player_resources, {}, {})
+    catan.print_resources()
     
 
 
