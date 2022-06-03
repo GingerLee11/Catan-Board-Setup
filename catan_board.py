@@ -356,7 +356,13 @@ class CatanIsland:
         numbers = [number for number in numbers_dict.keys()]
         convert_to_points = self.num_to_points
 
-        for tile in self.position_dict.values():
+        tiles = [tile for tile in self.position_dict.values() if tile.resource != 'Desert']
+        tiles_queue = deque(tiles)
+
+        resource_not_balanced = 0
+        while len(tiles_queue) > 0:
+
+            tile = tiles_queue.popleft()
 
             # Selects a number from the remaining available numbers
             number_indx = randint(0, len(numbers) - 1)
@@ -365,19 +371,48 @@ class CatanIsland:
             # Gives how many points the number is equivalent to
             points = convert_to_points[number]
 
-            if tile.resource != 'Desert':
+            no_adj_nums_or_points = self._check_adjacent_numbers()
+                
+
+            # Check for adjacent numbers and points
+            if no_adj_nums_or_points == True:
                 tile.number = number
                 tile.points = points
 
-                # If all checks are passed update all the resource, number and points information
-                # Update the numbers_dict
-                numbers_dict[number] -= 1
-                if numbers_dict[number] == 0:
-                    numbers_dict.pop(number)
-                    numbers.pop(number_indx)
+                if resource_not_balanced < 3:
+                    resource_balance = self._check_resource_number_balance(tile)
+                else:
+                    resource_balance = True
+                    resource_not_balanced = 0
+
+                if resource_balance == True:
+
+                    # Add all the values to the dictionaries
+                    # Numbers dict
+                    if tile.resource in self.resource_numbers:
+                        self.resource_numbers[tile.resource].append(tile.number)
+                    else:
+                        self.resource_numbers[tile.resource] = [tile.number]
+
+                    # Points dict
+                    if tile.resource in self.resource_points:
+                        self.resource_points[tile.resource].append(tile.points)
+                    else:
+                        self.resource_points[tile.resource] = [tile.points]
+
+                    # If all checks are passed update all the resource, number and points information
+                    # Update the numbers_dict
+                    numbers_dict[number] -= 1
+                    if numbers_dict[number] == 0:
+                        numbers_dict.pop(number)
+                        numbers.pop(number_indx)
+
+                else:
+                    tiles_queue.append(tile)
+                    resource_not_balanced += 1
+            else:
+                tiles_queue.append(tile)
                 
-        self._check_adjacent_numbers()
-        self._check_resource_number_balance()
 
     def _check_adjacent_numbers(self):
         """
@@ -385,15 +420,17 @@ class CatanIsland:
         """
 
         # Create a queue for the tiles
-        tiles = [tile for tile in self.position_dict.values() if tile.resource != 'Desert']
+        tiles = [tile for tile in self.position_dict.values() if tile.resource != 'Desert' and tile.number != None]
         tiles_queue = deque(tiles)
         count = 0
+        if len(tiles_queue) == 2:
+            return True
         while len(tiles_queue) > 0:
 
             # TODO: Implement a failsafe to prevent
             # infinite loops
             if count > 100:
-                self._place_resources(self.resources_dict)
+                return False
 
             tile = tiles_queue.popleft()
             count += 1
@@ -421,7 +458,7 @@ class CatanIsland:
                                 adj_adj.points = adj_points
                                 if adj_adj not in tiles_queue:
                                         tiles_queue.append(adj_adj)
-                                break
+                                
 
                 # Check to see if there are adjacent 1 or 5 point number tokens
                 # And if there are move the tokens
@@ -443,27 +480,48 @@ class CatanIsland:
                                     adj_adj.points = adj_points
                                     if adj_adj not in tiles_queue:
                                         tiles_queue.append(adj_adj)
-                                    break
+                                    
 
         return True
 
-    def _check_resource_number_balance(self):
+    def _check_resource_number_balance(self, tile):
         """
         Checks to make sure that the numbers are balanced for each of the resources
         """
-        for tile in self.position_dict.values():
+        
+        if tile.resource in self.tiles_by_resource:
+            self.tiles_by_resource[tile.resource].append(tile)
+        else: 
+            self.tiles_by_resource[tile.resource] = [tile]
 
-            if tile.resource in self.tiles_by_resource:
-                self.tiles_by_resource[tile.resource].append(tile)
-            else: 
-                self.tiles_by_resource[tile.resource] = tile
-            
-            if tile.resource in self.total_points_per_resource:
-                self.total_points_per_resource[tile.resource] += tile.points
-            else:
-                self.total_points_per_resource[tile.resource] = tile.points
+        # Initialize dictionaries
+        # Numbers dict
+        if tile.resource  not in self.resource_numbers:
+            self.resource_numbers[tile.resource] = []
 
-        return self.tiles_by_resource
+        # Points dict
+        if tile.resource not in self.resource_points:
+            self.resource_points[tile.resource] = []
+        
+        if tile.number in self.resource_numbers[tile.resource]:
+            tile.number = None
+            tile.points = 0
+            return False
+
+        if tile.points == 5 or tile.points == 1:
+            if len(self.resource_points) > 1:
+                if tile.points in self.resource_points[tile.resource]:
+                    num_fives = 0
+                    for point_list in self.resource_points.values():
+                        if 5 in point_list:
+                            num_fives += 1
+                    if num_fives < 4:
+                        tile.number = None
+                        tile.points = 0
+                        return False
+        
+
+        return True
 
 
 
@@ -711,6 +769,9 @@ class CatanIsland:
         horizontal_line_segment = '___'
         horizontal_line = horizontal_line_segment * self.horizontal
         print()
+        for resource, point_list in self.resource_points.items():
+            print(f"{resource}: {sum(point_list)}", end=' ')
+        print()
 
         for y in range(len(island)):
             for x in range(len(island[0])):
@@ -725,31 +786,31 @@ class CatanIsland:
 
 
 def example():
-
-    three_four_player_resources = {
-        'Brick': 3,
-        'Wood': 4,
-        'Ore': 3,
-        'Grain': 4,
-        'Sheep': 4,
-        'Desert': 1,
-    }
-    three_four_player_numbers = {
-        '2': 1, 
-        '3': 2, 
-        '4': 2, 
-        '5': 2, 
-        '6': 2, 
-        '8': 2, 
-        '9': 2, 
-        '10': 2, 
-        '11': 2, 
-        '12': 1, 
-    }
-    
-    catan = CatanIsland(5, 3, three_four_player_resources, three_four_player_numbers)
-    catan.print_resources()
-    catan.print_numbers()
+    for x in range(10):
+        three_four_player_resources = {
+            'Brick': 3,
+            'Wood': 4,
+            'Ore': 3,
+            'Grain': 4,
+            'Sheep': 4,
+            'Desert': 1,
+        }
+        three_four_player_numbers = {
+            '2': 1, 
+            '3': 2, 
+            '4': 2, 
+            '5': 2, 
+            '6': 2, 
+            '8': 2, 
+            '9': 2, 
+            '10': 2, 
+            '11': 2, 
+            '12': 1, 
+        }
+        
+        catan = CatanIsland(5, 3, three_four_player_resources, three_four_player_numbers)
+        catan.print_resources()
+        catan.print_numbers()
 
 
 
