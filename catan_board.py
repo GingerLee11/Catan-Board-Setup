@@ -366,6 +366,7 @@ class CatanIsland:
         """
         # Create a list and then a queue of resources to go through until all the resources
         # Have number tokens on them.
+        all_tiles = [tile for tile in self.position_dict.values() if tile.resource != 'Desert']
         resources = [resource for resource in self.tiles_by_resource.keys()]
         resources_queue = deque(resources)
         numbers_queue = deque(self.number_placement_order)
@@ -375,7 +376,24 @@ class CatanIsland:
         while len(numbers_queue) != 0:
 
             count += 1
-            print(count)
+            
+            # Once the count reaches a certian threshold,
+            # remove all the number and points from the tiles
+            if count >= 100:
+            
+                for tile in all_tiles:
+                    if tile.number != None:
+                        if tile.number not in numbers_queue:
+                            numbers_queue.append(tile.number)
+                        if tile.number not in numbers_dict:
+                            numbers_dict[tile.number] = 1
+                        else:
+                            numbers_dict[tile.number] += 1
+
+                    tile.number = None
+                    tile.points = 0
+                count = 0
+                
 
             # Go through the resources and keep the number until that number is used up
             number = numbers_queue.popleft()
@@ -476,7 +494,7 @@ class CatanIsland:
 
 
 def example():
-    for x in range(10):
+    for x in range(100):
         three_four_player_resources = {
             'Brick': 3,
             'Wood': 4,
@@ -502,6 +520,8 @@ def example():
         catan.print_resources()
         catan.print_numbers()
         catan.print_resources_by_tile()
+
+
 
 
 
