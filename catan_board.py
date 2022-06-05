@@ -5,7 +5,7 @@ from calendar import c
 from pickle import PickleBuffer
 from string import ascii_uppercase
 from math import floor
-from random import randint
+from random import randint, shuffle
 from collections import deque
 
 
@@ -76,6 +76,20 @@ class CatanIsland:
             '11': 2, 
             '12': 1, 
         }
+        self.number_placement_order = [
+            '8', 
+            '6', 
+            '9',
+            '12',
+            '2', 
+            '5', 
+            '10', 
+            '4', 
+            '11', 
+            '3', 
+            
+              
+        ]
         
         # Tile Information:
         self.position_dict = {}
@@ -104,7 +118,7 @@ class CatanIsland:
         # Create the island:
         self.island = self._create_island()
         self._place_resources(resource_dict)
-        self._place_numbers_2(numbers_dict)
+        self._place_numbers_by_resource(numbers_dict)
 
 
     def _create_grid(self, max_width, min_width):
@@ -256,7 +270,7 @@ class CatanIsland:
                     resources.remove(tile.resource)
 
 
-        tiles = [tile for tile in self.position_dict.values()]
+        tiles = [tile for tile in self.position_dict.values() if tile.resource != 'Desert']
         tiles_queue = deque(tiles)   
 
         while len(tiles_queue) > 0:
@@ -290,6 +304,19 @@ class CatanIsland:
                 # If the check is met then decrease the number of that resource by one
                 if num_adj < 2:
                     tile.resource = resource
+                    
+                    # TODO: Find out why other resources are being added to the 
+                    # different resources
+                    # i.e. grain in sheep and vice versa. 
+                    # WHYYYYYYYYYYY????????? WTH!
+
+                    # Add the tile to the tiles by resource dictionary
+                    if tile.resource != None and resource != 'Desert' and tile.resource != 'Desert':
+                        if resource not in self.tiles_by_resource:
+                            self.tiles_by_resource[resource] = [tile]
+                        else:
+                            if tile not in self.tiles_by_resource[resource] and tile.resource == resource:
+                                self.tiles_by_resource[resource].append(tile)
 
                     resources_dict[resource] -= 1
                     if resources_dict[resource] == 0:
@@ -309,432 +336,86 @@ class CatanIsland:
                 else:
                     adj_count += 1
 
-
-    def _check_three_tile_sum(self, points, adj_tile_1, adj_tile_2):
+    def _check_adjacent_tiles(self, tile, number):
         """
-        Sum the point values of the three tiles to see if
-        the sum exceeds 12 or is less than 3.
+        Checks adjacent tiles for the proposed tile 
+        to check if any of the surrounding numbers are the same. 
+        Or if 5 or 1 point tiles are adjacent to one another
         """
-        sum_check = False
-        three_tile_sum = 0
-        three_tile_sum += points
+        points = self.num_to_points[number]
 
-        if adj_tile_1.number == None and adj_tile_2 == None:
-            if points > 1:
-                sum_check = True
-                return sum_check
-
-
-        three_tile_sum += adj_tile_1.points
-        three_tile_sum += adj_tile_2.points
-
-        if three_tile_sum >= 3 and three_tile_sum <= 12:
-            sum_check = True
-        
-
-        return sum_check
-
-    def _reset_tile_numbers_and_points(self, tile):
-        """
-        Resets a tile back to just having a resource.
-        """
-        self.resource_numbers[tile.resource].remove(tile.number)
-        self.resource_points[tile.resource].remove(tile.points)
-        self.total_points_per_resource[tile.resource] -= tile.points
-
-        tile.number = None
-        tile.points = 0
-
-        return tile
-
-    def _place_numbers_2(self, numbers_dict):
-        """
-        Simple method of placing numbers:
-        Randomly places a number in each tile
-        """
-
-        numbers = [number for number in numbers_dict.keys()]
-        convert_to_points = self.num_to_points
-
-        tiles = [tile for tile in self.position_dict.values() if tile.resource != 'Desert']
-        tiles_queue = deque(tiles)
-
-        resource_not_balanced = 0
-        while len(tiles_queue) > 0:
-
-            tile = tiles_queue.popleft()
-
-            # Selects a number from the remaining available numbers
-            number_indx = randint(0, len(numbers) - 1)
-            number = numbers[number_indx]
-
-            # Gives how many points the number is equivalent to
-            points = convert_to_points[number]
-
-            no_adj_nums_or_points = self._check_adjacent_numbers()
-                
-
-            # Check for adjacent numbers and points
-            if no_adj_nums_or_points == True:
-                tile.number = number
-                tile.points = points
-
-                if resource_not_balanced < 3:
-                    resource_balance = self._check_resource_number_balance(tile)
-                else:
-                    resource_balance = True
-                    resource_not_balanced = 0
-
-                if resource_balance == True:
-
-                    # Add all the values to the dictionaries
-                    # Numbers dict
-                    if tile.resource in self.resource_numbers:
-                        self.resource_numbers[tile.resource].append(tile.number)
-                    else:
-                        self.resource_numbers[tile.resource] = [tile.number]
-
-                    # Points dict
-                    if tile.resource in self.resource_points:
-                        self.resource_points[tile.resource].append(tile.points)
-                    else:
-                        self.resource_points[tile.resource] = [tile.points]
-
-                    # If all checks are passed update all the resource, number and points information
-                    # Update the numbers_dict
-                    numbers_dict[number] -= 1
-                    if numbers_dict[number] == 0:
-                        numbers_dict.pop(number)
-                        numbers.pop(number_indx)
-
-                else:
-                    tiles_queue.append(tile)
-                    resource_not_balanced += 1
-            else:
-                tiles_queue.append(tile)
-                
-
-    def _check_adjacent_numbers(self):
-        """
-        Makes sure that there are not any adjacent tiles with the same numbers. 
-        """
-
-        # Create a queue for the tiles
-        tiles = [tile for tile in self.position_dict.values() if tile.resource != 'Desert' and tile.number != None]
-        tiles_queue = deque(tiles)
-        count = 0
-        if len(tiles_queue) == 2:
-            return True
-        while len(tiles_queue) > 0:
-
-            # TODO: Implement a failsafe to prevent
-            # infinite loops
-            if count > 100:
+        for adj in tile.possible_adjacents:
+            # If any of the adjacent numbers have the same number, 
+            # return False
+            if adj.number == number:
                 return False
 
-            tile = tiles_queue.popleft()
+            if points == 5 or points == 1:
+                if adj.points == points:
+                    return False
+        
+        return True
+
+
+    def _place_numbers_by_resource(self, numbers_dict):
+        """
+        Places the numbers in order from 5 point tokens to
+        1 point tokens.
+        Randomize which order the resources are chosen in to make 
+        so that the board isn't the same everytime.
+        """
+        # Create a list and then a queue of resources to go through until all the resources
+        # Have number tokens on them.
+        resources = [resource for resource in self.tiles_by_resource.keys()]
+        resources_queue = deque(resources)
+        numbers_queue = deque(self.number_placement_order)
+        
+        count = 0
+
+        while len(numbers_queue) != 0:
+
             count += 1
+            print(count)
+
+            # Go through the resources and keep the number until that number is used up
+            number = numbers_queue.popleft()
+            points = self.num_to_points[number]
+            resource = resources_queue.popleft()
+
+            tiles = [tile for tile in reversed(self.tiles_by_resource[resource]) if tile.resource == resource]
             
-            # Check to see if any adjacent numbers are the same
-            for adj in tile.possible_adjacents:
-                # If the numbers are the same, 
-                # switch the number of the adjacent tile (b)
-                # with an adjacent tile (c) of that tile b
-                # that does not equal the number of the tile
-                if tile.number == adj.number:
-                    if tile not in tiles_queue:
-                        tiles_queue.append(tile)
-                    if adj not in tiles_queue:
-                        tiles_queue.append(adj)
-                    for adj_adj in adj.possible_adjacents:
-                        if adj_adj.number != None:
-                            if adj_adj.number != tile.number:
-                                # Swap the numbers and the points
-                                adj_number = adj.number
-                                adj_points = adj.points
-                                adj.number = adj_adj.number
-                                adj.points = adj_adj.points
-                                adj_adj.number = adj_number
-                                adj_adj.points = adj_points
-                                if adj_adj not in tiles_queue:
-                                        tiles_queue.append(adj_adj)
-                                
+            shuffle(tiles)
+            for tile in tiles:
+    
+                # TODO: Add checks for balancing
+                # Iterate through the tiles until a tile that meets the criteria is met
+                if tile.number == None:
+                    check_adjacents = self._check_adjacent_tiles(tile, number)
+                    if check_adjacents == True:
+                        tile.number = number
+                        tile.points = points
 
-                # Check to see if there are adjacent 1 or 5 point number tokens
-                # And if there are move the tokens
-                if tile.points == 5 or tile.points == 1:
-                    if tile.points == adj.points:
-                        if tile not in tiles_queue:
-                            tiles_queue.append(tile)
-                        if adj not in tiles_queue:
-                            tiles_queue.append(adj)
-                        for adj_adj in adj.possible_adjacents:
-                            if adj_adj.number != None:
-                                if adj_adj.points != tile.points:
-                                # Swap the numbers and the points
-                                    adj_number = adj.number
-                                    adj_points = adj.points
-                                    adj.number = adj_adj.number
-                                    adj.points = adj_adj.points
-                                    adj_adj.number = adj_number
-                                    adj_adj.points = adj_points
-                                    if adj_adj not in tiles_queue:
-                                        tiles_queue.append(adj_adj)
-                                    
+                        # Add up the total points to see how balanced the board is
+                        if resource in self.total_points_per_resource:
+                            self.total_points_per_resource[resource] += points
+                        else:
+                            self.total_points_per_resource[resource] = points
 
-        return True
-
-    def _check_resource_number_balance(self, tile):
-        """
-        Checks to make sure that the numbers are balanced for each of the resources
-        """
-        
-        if tile.resource in self.tiles_by_resource:
-            self.tiles_by_resource[tile.resource].append(tile)
-        else: 
-            self.tiles_by_resource[tile.resource] = [tile]
-
-        # Initialize dictionaries
-        # Numbers dict
-        if tile.resource  not in self.resource_numbers:
-            self.resource_numbers[tile.resource] = []
-
-        # Points dict
-        if tile.resource not in self.resource_points:
-            self.resource_points[tile.resource] = []
-        
-        if tile.number in self.resource_numbers[tile.resource]:
-            tile.number = None
-            tile.points = 0
-            return False
-
-        if tile.points == 5 or tile.points == 1:
-            if len(self.resource_points) > 1:
-                if tile.points in self.resource_points[tile.resource]:
-                    num_fives = 0
-                    for point_list in self.resource_points.values():
-                        if 5 in point_list:
-                            num_fives += 1
-                    if num_fives < 4:
-                        tile.number = None
-                        tile.points = 0
-                        return False
-        
-
-        return True
-
-
-
-    '''
-    def _place_numbers(self, numbers_dict):
-        """
-        Places the resources in such a way to make the layout as balanced as possible.
-        numbers is a dictionary containing the numbers used in the game and quantity of those numbers.
-        num_to_pt_dict converts the numbers to the appropriate point value:
-        8, 6: 5 pts
-        9, 5: 4 pts
-        10, 4: 3 pts
-        11, 3: 2 pts
-        12, 2: 1 pt
-
-        Places numbers on the resource tile based on the following rules:
-        No adjacent red tiles (5pt tiles)
-        No adj 2's or 12's (1pt tiles)
-        3 tile sum: 3 <= three_tile_sum <= 12
-        no adj tiles with same numbers
-        Balances the number distribution by resource
-        """
-        convert_to_points = self.num_to_points
-
-        # Create a queue for the tiles
-        tiles = [tile for tile in self.position_dict.values()]
-        tiles_queue = deque(tiles)
-
-        # Create a list of the numbers
-        numbers = [number for number in numbers_dict.keys()]
-        # Go through all the tiles until they all have numbers 
-        # Except for the desert tiles
-        while len(tiles_queue) > 0:
-            tile = tiles_queue.popleft()
-            if tile.resource != 'Desert':
-                count = 0
-                while tile.number == None:
-                    # If count exceed the half the original length of the 
-                    if count > 3:
-                        tiles_queue.append(tile)
+                        numbers_dict[number] -= 1
+                        if numbers_dict[number] == 0:
+                            numbers_dict.pop(number)
+                        else:
+                            numbers_queue.appendleft(number)   
                         break
-                        
 
-                    # Selects a number from the remaining available numbers
-                    number_indx = randint(0, len(numbers) - 1)
-                    number = numbers[number_indx]
+            if number in numbers_dict and number not in numbers_queue:
+                numbers_queue.appendleft(number) 
+            resources_queue.append(resource) 
 
-                    # Gives how many points the number is equivalent to
-                    points = convert_to_points[number]
 
-                    # No same numbers for the same resource
-                    # (This may not work for bigger islands)
-                    if tile.resource in self.resource_numbers:
-                        if number in self.resource_numbers[tile.resource]: 
-                            continue
-                        
-                    # Check to make sure no resource is assigned more than a single 1 point token
-                    # Also ensure that the resource with a 1 pt token already has a 5 point token
-                    if points == 1:
-                        if tile.resource in self.resource_points:
-                            if points in self.resource_points[tile.resource]:
-                                continue
-                            # elif 5 not in self.resource_points[tile.resource]:
-                            #    continue
-
-                    # Check that no resource has a second 5 point token before all other 
-                    # resources already have a 5 point token
-                    if points == 5:
-                        tppr_dict = self.total_points_per_resource
-                        if tile.resource in self.resource_points: # This might not be the check I want
-                            if points in self.resource_points[tile.resource]:
-                                has_points = 0
-                                total_resources = len(self.resource_points) - 1
-                                for p_resource in self.resource_points.keys():
-                                    if points in self.resource_points[p_resource]:
-                                        has_points += 1
-                                if total_resources < 2 or has_points < total_resources:
-                                    # Reset the tile from the resource with the most points
-                                    max_resource = max(tppr_dict, key=tppr_dict.get)
-                                    if points in self.resource_points[max_resource]:
-                                        for max_tile in self.tiles_by_resource[max_resource]:
-                                            if points == max_tile.points:
-                                                if max_tile.number not in numbers_dict:
-                                                    numbers_dict[max_tile.number] = 1
-                                                    numbers.append(max_tile.number)
-                                                else: 
-                                                    numbers_dict[max_tile.number] += 1
-                                                    max_tile = self._reset_tile_numbers_and_points(max_tile)
-                                                    tiles_queue.append(max_tile)
-                                                    break
-                                    
-
-                            # min_points = tppr_dict[min(tppr_dict, key=tppr_dict.get)]
-                            # if tppr_dict[tile.resource] != min_points:
-                            #     continue
-                            # if len(tppr_dict) < 2:
-                            #     continue
-
-                    # Perform checks:
-                    # Check for same adjacent numbers
-                    same_num_adj = False
-                    adj_1_or_5_point_tile = False
-                    for adj in tile.possible_adjacents:
-                        if adj.number == number:
-                            same_num_adj = True
-                            # Add the number back to the numbers dict
-                            # and clear the tile
-                            if adj.number not in numbers_dict:
-                                numbers_dict[adj.number] = 1
-                                numbers.append(adj.number)
-                            else: 
-                                numbers_dict[adj.number] += 1
-                                adj_tile = self._reset_tile_numbers_and_points(adj)
-                                tiles_queue.append(adj_tile)
-                            break
-
-                    for adj in tile.possible_adjacents:
-                        if points == 1 or points == 5:
-                            if adj.points == points:
-                                adj_1_or_5_point_tile = True
-                                # Add the number back to the numbers dict
-                                # and clear the tile
-                                if adj.number not in numbers_dict:
-                                    numbers_dict[adj.number] = 1
-                                    numbers.append(adj.number)
-                                else: 
-                                    numbers_dict[adj.number] += 1
-                                    adj_tile = self._reset_tile_numbers_and_points(adj)
-                                    tiles_queue.append(adj_tile)
-                                break
-                    
-                    # If either of the conditions were true, 
-                    # pick another remaining number and try again
-                    if same_num_adj or adj_1_or_5_point_tile:
-                        continue
-
-                    # Three tile sum check: 
-                    # Ensure that no settlement spot has an adjacency of more than 12 or less than 3
-                    adj_tiles = tile.possible_adjacents
-                    # Check to see if this tile is on the edge of the island
-                    # If it is then the points value should not be 1
-                    if len(adj_tiles) <= 3:
-                        if points == 1:
-                            continue
-
-                    prev = None
-                    for adj in adj_tiles:
-                        if prev != None:
-                            sum_check = self._check_three_tile_sum(points, prev, adj)
-                            if sum_check == False:
-                                # Remove adj tile
-                                if adj.resource != 'Desert' and adj.number != None:
-                                    if adj.number not in numbers_dict:
-                                        numbers_dict[adj.number] = 1
-                                        numbers.append(adj.number)
-                                    else: 
-                                        numbers_dict[adj.number] += 1
-                                        adj_tile = self._reset_tile_numbers_and_points(adj)
-                                        tiles_queue.append(adj_tile)
-                                # Remove prev tile
-                                if prev.resource != 'Desert' and prev.number != None:
-                                    if prev.number not in numbers_dict:
-                                        numbers_dict[prev.number] = 1
-                                        numbers.append(prev.number)
-                                    else: 
-                                        numbers_dict[prev.number] += 1
-                                        prev_tile = self._reset_tile_numbers_and_points(prev)
-                                        tiles_queue.append(prev_tile)
-
-                                break
-                        prev = adj
-
-                    # If either of the condition is False, 
-                    # pick another remaining number and try again
-                    if sum_check == False:
-                        continue
+        print('Done!')
                 
-                    # If all checks are passed update all the resource, number and points information
-                    # Update the numbers_dict
-                    numbers_dict[number] -= 1
-                    if numbers_dict[number] == 0:
-                        numbers_dict.pop(number)
-                        numbers.pop(number_indx)
 
-                    # Update the numbers for each resource
-                    if tile.resource in self.resource_numbers:
-                        self.resource_numbers[tile.resource].append(number)
-                    else:
-                        self.resource_numbers[tile.resource] = [number]
-
-                    # Add the points token to the resource_points dict for tracking
-                    if tile.resource in self.resource_points:
-                        self.resource_points[tile.resource].append(points)
-                    else:
-                        self.resource_points[tile.resource] = [points]
-
-                    # Update the total points for that resource
-                    if tile.resource in self.total_points_per_resource:
-                        self.total_points_per_resource[tile.resource] += points
-                    else:
-                        self.total_points_per_resource[tile.resource] = points
-
-                    # Add the points and the number to the tile
-                    tile.number = number
-                    tile.points = points
-
-                    # Add the resource to the tile_by_resource dictionary
-                    if tile.resource not in self.tiles_by_resource:
-                        self.tiles_by_resource[tile.resource] = [tile]
-                    else:
-                        self.tiles_by_resource[tile.resource].append(tile)
-'''
-                    
 
 
     def print_resources(self):
@@ -784,6 +465,15 @@ class CatanIsland:
             print(f'\n{horizontal_line}')
 
 
+    def print_resources_by_tile(self):
+
+        for resource, tiles in self.tiles_by_resource.items():
+            tile_resources = [tile.resource for tile in tiles]
+            tile_positions = [tile.pos for tile in tiles]
+
+            print(f"{resource}: {tile_resources} @ {tile_positions}")
+
+
 
 def example():
     for x in range(10):
@@ -811,6 +501,7 @@ def example():
         catan = CatanIsland(5, 3, three_four_player_resources, three_four_player_numbers)
         catan.print_resources()
         catan.print_numbers()
+        catan.print_resources_by_tile()
 
 
 
