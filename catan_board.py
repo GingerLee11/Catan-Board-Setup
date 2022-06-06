@@ -516,8 +516,6 @@ class CatanIsland:
                 numbers_dict, numbers_queue = self._reset_tile_numbers(all_tiles, numbers_dict, numbers_queue)
                 self._place_numbers_by_resource(numbers_dict)
 
-         
-
 
     def print_resources(self):
         """
