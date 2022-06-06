@@ -199,11 +199,11 @@ class CatanIsland:
 
                 # If the tile is in the middle row of the island
                 elif y == floor(len(grid) / 2):
-                    if x < diff:
+                    if x == 0:
                         tile.right = grid[y][x + 2]
                         tile.top_right = grid[y - 1][x + 1]
                         tile.bottom_right = grid[y + 1][x + 1]
-                    elif x > (horizontal - 1) - diff:
+                    elif x == (horizontal - 1):
                         tile.left = grid[y][x - 2]
                         tile.top_left = grid[y - 1][x - 1]
                         tile.bottom_left = grid[y + 1][x - 1]
@@ -217,7 +217,7 @@ class CatanIsland:
 
 
                 # If the tile is at the far left side, but not top or bottom or middle
-                elif x <= diff:
+                elif x < diff:
                     tile.right = grid[y][x + 2]
                     tile.top_right = grid[y - 1][x + 1]
                     tile.bottom_right = grid[y + 1][x + 1]
@@ -229,7 +229,7 @@ class CatanIsland:
                         tile.bottom_left = grid[y + 1][x - 1]
 
                 # Tile on the far right side, but not top or bottom or middle
-                elif x >= (horizontal - 1) - diff:
+                elif x > (horizontal - 1) - diff:
                     tile.left = grid[y][x - 2]
                     tile.top_left = grid[y - 1][x - 1]
                     tile.bottom_left = grid[y + 1][x - 1]
@@ -580,9 +580,19 @@ class Test(unittest.TestCase):
 
     small_test_island = [l_exp, r_exp, t_l_exp, t_r_exp, b_l_exp, b_r_exp]
 
+    l_exp = [None, 'A3', 'A5', None, 'B2', 'B4', 'B6', None, 'C1', 'C3', 'C5', 'C7', None, 'D0', 'D2', 'D4', 'D6', 'D8', None, 'E1', 'E3', 'E5', 'E7', None, 'F2', 'F4', 'F6', None, 'G3', 'G5' ]
+    r_exp = ['A5', 'A7', None, 'B4', 'B6', 'B8', None, 'C3', 'C5', 'C7', 'C9', None, 'D2', 'D4', 'D6', 'D8', 'D10', None, 'E3', 'E5', 'E7', 'E9', None, 'F4', 'F6', 'F8', None, 'G5', 'G7', None]
+    t_l_exp = [None, None, None, None, 'A3', 'A5', 'A7', None, 'B2', 'B4', 'B6', 'B8', None, 'C1', 'C3', 'C5', 'C7', 'C9', 'D0', 'D2', 'D4', 'D6', 'D8', 'E1', 'E3', 'E5', 'E7', 'F2', 'F4', 'F6']
+    t_r_exp = [None, None, None, 'A3', 'A5', 'A7', None, 'B2', 'B4', 'B6', 'B8', None, 'C1', 'C3', 'C5', 'C7', 'C9', None, 'D2', 'D4', 'D6', 'D8', 'D10', 'E3', 'E5', 'E7', 'E9', 'F4', 'F6', 'F8']
+    b_l_exp = ['B2', 'B4', 'B6', 'C1', 'C3', 'C5', 'C7', 'D0', 'D2', 'D4', 'D6', 'D8', None, 'E1', 'E3', 'E5', 'E7', 'E9', None, 'F2', 'F4', 'F6', 'F8', None, 'G3', 'G5', 'G7', None, None, None]
+    b_r_exp = ['B4', 'B6', 'B8', 'C3', 'C5', 'C7', 'C9', 'D2', 'D4', 'D6', 'D8', 'D10', 'E1', 'E3', 'E5', 'E7', 'E9', None, 'F2', 'F4', 'F6', 'F8', None, 'G3', 'G5', 'G7', None, None, None, None]
+
+    five_six_player_test = [l_exp, r_exp, t_l_exp, t_r_exp, b_l_exp, b_r_exp]
+
     tests = [
         (5, 3, three_four_player_test), 
         (3, 2, small_test_island),
+        (6, 3, five_six_player_test),
     ]
 
     def generate_catan_board(self, max_width, min_width):
