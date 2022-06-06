@@ -1,12 +1,12 @@
 # python3
 # catan_board.py - Tile and Catan Board classes. Set up a balanced catan board given proper inputs.
 
-from calendar import c
-from pickle import PickleBuffer
 from string import ascii_uppercase
 from math import floor
 from random import randint, shuffle
 from collections import deque
+
+import unittest
 
 
 class Tile:
@@ -117,8 +117,11 @@ class CatanIsland:
 
         # Create the island:
         self.island = self._create_island()
-        self._place_resources(resource_dict)
-        self._place_numbers_by_resource(numbers_dict)
+        # For testing:
+        if resource_dict != {}:
+            self._place_resources(resource_dict)
+        if numbers_dict != {}:
+            self._place_numbers_by_resource(numbers_dict)
 
 
     def _create_grid(self, max_width, min_width):
@@ -174,7 +177,7 @@ class CatanIsland:
                     if x <= diff:
                         tile.right = grid[y][x + 2]
                     # On the far right side
-                    elif x >= horizontal - diff:
+                    elif x >= (horizontal - 1) - diff:
                         tile.left = grid[y][x - 2]
                     else:
                         tile.right = grid[y][x + 2]
@@ -194,18 +197,39 @@ class CatanIsland:
                         tile.right = grid[y][x + 2]
                         tile.left = grid[y][x - 2]
 
-                # If the tile is at the far left side, but not top or bottom
+                # If the tile is in the middle row of the island
+                elif y == floor(len(grid) / 2):
+                    if x < diff:
+                        tile.right = grid[y][x + 2]
+                        tile.top_right = grid[y - 1][x + 1]
+                        tile.bottom_right = grid[y + 1][x + 1]
+                    elif x > (horizontal - 1) - diff:
+                        tile.left = grid[y][x - 2]
+                        tile.top_left = grid[y - 1][x - 1]
+                        tile.bottom_left = grid[y + 1][x - 1]
+                    else:
+                        tile.right = grid[y][x + 2]
+                        tile.top_right = grid[y - 1][x + 1]
+                        tile.bottom_right = grid[y + 1][x + 1]
+                        tile.left = grid[y][x - 2]
+                        tile.top_left = grid[y - 1][x - 1]
+                        tile.bottom_left = grid[y + 1][x - 1]
+
+
+                # If the tile is at the far left side, but not top or bottom or middle
                 elif x <= diff:
                     tile.right = grid[y][x + 2]
                     tile.top_right = grid[y - 1][x + 1]
                     tile.bottom_right = grid[y + 1][x + 1]
                     # Only include the top_left tile if 
                     # more than halfway down the board
-                    if y > len(grid) / 2:
+                    if y > floor(len(grid) / 2):
                         tile.top_left = grid[y - 1][x - 1]
+                    elif y < floor(len(grid) / 2):
+                        tile.bottom_left = grid[y + 1][x - 1]
 
-                # Tile on the far right side, but not top or bottom
-                elif x >= horizontal - diff:
+                # Tile on the far right side, but not top or bottom or middle
+                elif x >= (horizontal - 1) - diff:
                     tile.left = grid[y][x - 2]
                     tile.top_left = grid[y - 1][x - 1]
                     tile.bottom_left = grid[y + 1][x - 1]
@@ -213,6 +237,9 @@ class CatanIsland:
                     # less than halfway down the board
                     if y < floor(len(grid) / 2):
                         tile.bottom_right = grid[y + 1][x + 1]
+                    elif y > floor(len(grid) / 2):
+                        tile.top_right = grid[y - 1][x + 1]
+                    
 
                 else:
                     tile.right = grid[y][x + 2]
@@ -431,11 +458,6 @@ class CatanIsland:
             resources_queue.append(resource) 
 
 
-        print('Done!')
-                
-
-
-
     def print_resources(self):
         """
         Prints where the resources are on the island.
@@ -490,40 +512,98 @@ class CatanIsland:
             tile_positions = [tile.pos for tile in tiles]
 
             print(f"{resource}: {tile_resources} @ {tile_positions}")
+    
+    def tiles(self):
+        """
+        Prints the position of all the tiles
+        """
+        tiles = [tile for tile in self.position_dict.values()]
+        return tiles
 
 
 
 def example():
-    for x in range(100):
-        three_four_player_resources = {
-            'Brick': 3,
-            'Wood': 4,
-            'Ore': 3,
-            'Grain': 4,
-            'Sheep': 4,
-            'Desert': 1,
-        }
-        three_four_player_numbers = {
-            '2': 1, 
-            '3': 2, 
-            '4': 2, 
-            '5': 2, 
-            '6': 2, 
-            '8': 2, 
-            '9': 2, 
-            '10': 2, 
-            '11': 2, 
-            '12': 1, 
-        }
-        
-        catan = CatanIsland(5, 3, three_four_player_resources, three_four_player_numbers)
-        catan.print_resources()
-        catan.print_numbers()
-        catan.print_resources_by_tile()
+    #for x in range(100):
+    three_four_player_resources = {
+        'Brick': 3,
+        'Wood': 4,
+        'Ore': 3,
+        'Grain': 4,
+        'Sheep': 4,
+        'Desert': 1,
+    }
+    three_four_player_numbers = {
+        '2': 1, 
+        '3': 2, 
+        '4': 2, 
+        '5': 2, 
+        '6': 2, 
+        '8': 2, 
+        '9': 2, 
+        '10': 2, 
+        '11': 2, 
+        '12': 1, 
+    }
+    
+    catan = CatanIsland(5, 3, three_four_player_resources, three_four_player_numbers)
+    catan.print_resources()
+    catan.print_numbers()
+    catan.print_resources_by_tile()
 
 
 
+class Test(unittest.TestCase):
+
+    # Test the grid to make sure that all the relationships between tiles are correctly defined.
+    # Relationships for 5, 3 (three to four player island)
+    left_expected = [None, 'A2', 'A4', None, 'B1', 'B3', 'B5', None, 'C0', 'C2', 'C4', 'C6', None, 'D1', 'D3', 'D5', None, 'E2', 'E4']
+    right_expected = ['A4', 'A6', None, 'B3', 'B5', 'B7', None, 'C2', 'C4', 'C6', 'C8', None, 'D3', 'D5', 'D7', None, 'E4', 'E6', None]
+    top_left_expected = [None, None, None, None, 'A2', 'A4', 'A6', None, 'B1', 'B3', 'B5', 'B7', 'C0', 'C2', 'C4', 'C6', 'D1', 'D3', 'D5']
+    top_right_expected = [None, None, None, 'A2', 'A4', 'A6', None, 'B1', 'B3', 'B5', 'B7', None, 'C2', 'C4', 'C6', 'C8', 'D3', 'D5', 'D7']
+    bottom_left_expected = ['B1', 'B3', 'B5', 'C0', 'C2', 'C4', 'C6', None, 'D1', 'D3', 'D5', 'D7', None, 'E2', 'E4', 'E6', None, None, None]
+    bottom_right_expected = ['B3', 'B5', 'B7', 'C2', 'C4', 'C6', 'C8', 'D1', 'D3', 'D5', 'D7', None, 'E2', 'E4', 'E6', None, None, None, None]
+
+
+    def test_catan_island_grid(self):
+        catan_island = CatanIsland(5, 3, {}, {})
+        actual_tiles = catan_island.tiles()
+
+        # test relationships
+        for actual, left, right, top_left, top_right, bottom_left, bottom_right in zip(actual_tiles, self.left_expected, self.right_expected, 
+            self.top_left_expected, self.top_right_expected, self.bottom_left_expected, self.bottom_right_expected):
+            
+            # print(actual.pos)
+
+            if actual.left != None:
+                assert actual.left.pos == left
+            else:
+                assert actual.left == left
+
+            if actual.right != None:
+                assert actual.right.pos == right
+            else:
+                assert actual.right == right
+
+            if actual.top_left != None:
+                assert actual.top_left.pos == top_left
+            else:
+                assert actual.top_left == top_left
+
+            if actual.top_right != None:
+                assert actual.top_right.pos == top_right
+            else:
+                assert actual.top_right == top_right
+
+            if actual.bottom_left != None:
+                assert actual.bottom_left.pos == bottom_left
+            else:
+                assert actual.bottom_left == bottom_left
+
+            if actual.bottom_right != None:
+                assert actual.bottom_right.pos == bottom_right
+            else:
+                assert actual.bottom_right == bottom_right
 
 
 if __name__ == "__main__":
-    example()
+    unittest.main()
