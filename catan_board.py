@@ -500,17 +500,18 @@ class CatanIsland:
         # If even one tile fails the board is re-generated.
         for tile in all_tiles:
 
-            
-
             prev = None
             for adj in tile.possible_adjacents:
-
+                # Checks three tiles at a time
+                # so this skips the first iteration
+                # which would only check two tiles
                 if prev != None:
                     three_tile_sum_check = self._check_three_tile_sum(tile.points, adj, prev)
                     if three_tile_sum_check == False:
                         break
                 prev = adj
-
+            # If one of the tile checks is False 
+            # start over from scratch
             if three_tile_sum_check == False:
                 numbers_dict, numbers_queue = self._reset_tile_numbers(all_tiles, numbers_dict, numbers_queue)
                 self._place_numbers_by_resource(numbers_dict)
