@@ -556,6 +556,12 @@ class Test(unittest.TestCase):
 
     # Test the grid to make sure that all the relationships between tiles are correctly defined.
     # Relationships for 5, 3 (three to four player island)
+
+    tests = [
+        (5, 3),
+        (3, 2),
+    ]
+    
     left_expected = [None, 'A2', 'A4', None, 'B1', 'B3', 'B5', None, 'C0', 'C2', 'C4', 'C6', None, 'D1', 'D3', 'D5', None, 'E2', 'E4']
     right_expected = ['A4', 'A6', None, 'B3', 'B5', 'B7', None, 'C2', 'C4', 'C6', 'C8', None, 'D3', 'D5', 'D7', None, 'E4', 'E6', None]
     top_left_expected = [None, None, None, None, 'A2', 'A4', 'A6', None, 'B1', 'B3', 'B5', 'B7', 'C0', 'C2', 'C4', 'C6', 'D1', 'D3', 'D5']
@@ -563,46 +569,67 @@ class Test(unittest.TestCase):
     bottom_left_expected = ['B1', 'B3', 'B5', 'C0', 'C2', 'C4', 'C6', None, 'D1', 'D3', 'D5', 'D7', None, 'E2', 'E4', 'E6', None, None, None]
     bottom_right_expected = ['B3', 'B5', 'B7', 'C2', 'C4', 'C6', 'C8', 'D1', 'D3', 'D5', 'D7', None, 'E2', 'E4', 'E6', None, None, None, None]
 
+    three_four_player_test = [left_expected, right_expected, top_left_expected, top_right_expected, bottom_left_expected, bottom_right_expected]
+
+    l_exp = [None, 'A1', None, 'B0', 'B2', None, 'C1']
+    r_exp = ['A3', None, 'B2', 'B4', None, 'C3', None]
+    t_l_exp = [None, None, None, 'A1', 'A3', 'B0', 'B2']
+    t_r_exp = [None, None, 'A1', 'A3', None, 'B2', 'B4']
+    b_l_exp = ['B0', 'B2', None, 'C1', 'C3', None, None]
+    b_r_exp = ['B2', 'B4', 'C1', 'C3', None, None, None]
+
+    small_test_island = [l_exp, r_exp, t_l_exp, t_r_exp, b_l_exp, b_r_exp]
+
+    tests = [
+        (5, 3, three_four_player_test), 
+        (3, 2, small_test_island),
+    ]
+
+    def generate_catan_board(self, max_width, min_width):
+        catan_island = CatanIsland(max_width, min_width, {}, {})
+        actual_tiles = catan_island.tiles()
+        return actual_tiles
+
 
     def test_catan_island_grid(self):
-        catan_island = CatanIsland(5, 3, {}, {})
-        actual_tiles = catan_island.tiles()
+        for max_w, min_w, expected in self.tests:
+            actual_tiles = self.generate_catan_board(max_w, min_w)
 
-        # test relationships
-        for actual, left, right, top_left, top_right, bottom_left, bottom_right in zip(actual_tiles, self.left_expected, self.right_expected, 
-            self.top_left_expected, self.top_right_expected, self.bottom_left_expected, self.bottom_right_expected):
-            
-            # print(actual.pos)
+            # test relationships
+            for actual, left, right, top_left, top_right, bottom_left, bottom_right in zip(actual_tiles, expected[0], expected[1], 
+            expected[2], expected[3], expected[4], expected[5]):
+                
+                # print(actual.pos)
 
-            if actual.left != None:
-                assert actual.left.pos == left
-            else:
-                assert actual.left == left
+                if actual.left != None:
+                    assert actual.left.pos == left
+                else:
+                    assert actual.left == left
 
-            if actual.right != None:
-                assert actual.right.pos == right
-            else:
-                assert actual.right == right
+                if actual.right != None:
+                    assert actual.right.pos == right
+                else:
+                    assert actual.right == right
 
-            if actual.top_left != None:
-                assert actual.top_left.pos == top_left
-            else:
-                assert actual.top_left == top_left
+                if actual.top_left != None:
+                    assert actual.top_left.pos == top_left
+                else:
+                    assert actual.top_left == top_left
 
-            if actual.top_right != None:
-                assert actual.top_right.pos == top_right
-            else:
-                assert actual.top_right == top_right
+                if actual.top_right != None:
+                    assert actual.top_right.pos == top_right
+                else:
+                    assert actual.top_right == top_right
 
-            if actual.bottom_left != None:
-                assert actual.bottom_left.pos == bottom_left
-            else:
-                assert actual.bottom_left == bottom_left
+                if actual.bottom_left != None:
+                    assert actual.bottom_left.pos == bottom_left
+                else:
+                    assert actual.bottom_left == bottom_left
 
-            if actual.bottom_right != None:
-                assert actual.bottom_right.pos == bottom_right
-            else:
-                assert actual.bottom_right == bottom_right
+                if actual.bottom_right != None:
+                    assert actual.bottom_right.pos == bottom_right
+                else:
+                    assert actual.bottom_right == bottom_right
 
 
 if __name__ == "__main__":
