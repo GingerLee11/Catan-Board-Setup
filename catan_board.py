@@ -1,12 +1,12 @@
 # python3
 # catan_board.py - Tile and Catan Board classes. Set up a balanced catan board given proper inputs.
 
-from calendar import c
-from pickle import PickleBuffer
 from string import ascii_uppercase
 from math import floor
-from random import randint
+from random import randint, shuffle
 from collections import deque
+
+import unittest
 
 
 class Tile:
@@ -76,6 +76,20 @@ class CatanIsland:
             '11': 2, 
             '12': 1, 
         }
+        self.number_placement_order = [
+            '8', 
+            '6', 
+            '9',
+            '12',
+            '2', 
+            '5', 
+            '10', 
+            '4', 
+            '11', 
+            '3', 
+            
+              
+        ]
         
         # Tile Information:
         self.position_dict = {}
@@ -83,6 +97,8 @@ class CatanIsland:
         self.total_points_per_resource = {}
         self.resource_numbers = {}
         self.resource_points = {}
+        self.resources_dict = resource_dict
+        self.numbers_dict = numbers_dict
 
         # TODO: Create resource point dict
         # In order to find the resource with the current lowest point total
@@ -101,6 +117,11 @@ class CatanIsland:
 
         # Create the island:
         self.island = self._create_island()
+        # For testing:
+        if resource_dict != {}:
+            self._place_resources(resource_dict)
+        if numbers_dict != {}:
+            self._place_numbers_by_resource(numbers_dict)
 
 
     def _create_grid(self, max_width, min_width):
@@ -156,7 +177,7 @@ class CatanIsland:
                     if x <= diff:
                         tile.right = grid[y][x + 2]
                     # On the far right side
-                    elif x >= horizontal - diff:
+                    elif x >= (horizontal - 1) - diff:
                         tile.left = grid[y][x - 2]
                     else:
                         tile.right = grid[y][x + 2]
@@ -176,18 +197,39 @@ class CatanIsland:
                         tile.right = grid[y][x + 2]
                         tile.left = grid[y][x - 2]
 
-                # If the tile is at the far left side, but not top or bottom
-                elif x <= diff:
+                # If the tile is in the middle row of the island
+                elif y == floor(len(grid) / 2):
+                    if x == 0:
+                        tile.right = grid[y][x + 2]
+                        tile.top_right = grid[y - 1][x + 1]
+                        tile.bottom_right = grid[y + 1][x + 1]
+                    elif x == (horizontal - 1):
+                        tile.left = grid[y][x - 2]
+                        tile.top_left = grid[y - 1][x - 1]
+                        tile.bottom_left = grid[y + 1][x - 1]
+                    else:
+                        tile.right = grid[y][x + 2]
+                        tile.top_right = grid[y - 1][x + 1]
+                        tile.bottom_right = grid[y + 1][x + 1]
+                        tile.left = grid[y][x - 2]
+                        tile.top_left = grid[y - 1][x - 1]
+                        tile.bottom_left = grid[y + 1][x - 1]
+
+
+                # If the tile is at the far left side, but not top or bottom or middle
+                elif x < diff:
                     tile.right = grid[y][x + 2]
                     tile.top_right = grid[y - 1][x + 1]
                     tile.bottom_right = grid[y + 1][x + 1]
                     # Only include the top_left tile if 
                     # more than halfway down the board
-                    if y > len(grid) / 2:
+                    if y > floor(len(grid) / 2):
                         tile.top_left = grid[y - 1][x - 1]
+                    elif y < floor(len(grid) / 2):
+                        tile.bottom_left = grid[y + 1][x - 1]
 
-                # Tile on the far right side, but not top or bottom
-                elif x >= horizontal - diff:
+                # Tile on the far right side, but not top or bottom or middle
+                elif x > (horizontal - 1) - diff:
                     tile.left = grid[y][x - 2]
                     tile.top_left = grid[y - 1][x - 1]
                     tile.bottom_left = grid[y + 1][x - 1]
@@ -195,6 +237,9 @@ class CatanIsland:
                     # less than halfway down the board
                     if y < floor(len(grid) / 2):
                         tile.bottom_right = grid[y + 1][x + 1]
+                    elif y > floor(len(grid) / 2):
+                        tile.top_right = grid[y - 1][x + 1]
+                    
 
                 else:
                     tile.right = grid[y][x + 2]
@@ -207,10 +252,6 @@ class CatanIsland:
 
                 tile.possible_adjacents = tile._check_possible_adjacents()
                 self.position_dict[tile.pos] = tile
-        
-        # Place resources on the board:
-        self._place_resources(self.resources)
-        self._place_numbers(self.numbers)
 
         return grid
 
@@ -249,13 +290,14 @@ class CatanIsland:
             pos = f"{letter}{horz}"
             tile = self.position_dict[pos]
             tile.resource = 'Desert'
-            resources_dict[tile.resource] -= 1
-            if resources_dict[tile.resource] == 0:
-                resources_dict.pop(tile.resource)
-                resources.remove(tile.resource)
+            if tile.resource in resources_dict:
+                resources_dict[tile.resource] -= 1
+                if resources_dict[tile.resource] == 0:
+                    resources_dict.pop(tile.resource)
+                    resources.remove(tile.resource)
 
 
-        tiles = [tile for tile in self.position_dict.values()]
+        tiles = [tile for tile in self.position_dict.values() if tile.resource != 'Desert']
         tiles_queue = deque(tiles)   
 
         while len(tiles_queue) > 0:
@@ -289,6 +331,19 @@ class CatanIsland:
                 # If the check is met then decrease the number of that resource by one
                 if num_adj < 2:
                     tile.resource = resource
+                    
+                    # TODO: Find out why other resources are being added to the 
+                    # different resources
+                    # i.e. grain in sheep and vice versa. 
+                    # WHYYYYYYYYYYY????????? WTH!
+
+                    # Add the tile to the tiles by resource dictionary
+                    if tile.resource != None and resource != 'Desert' and tile.resource != 'Desert':
+                        if resource not in self.tiles_by_resource:
+                            self.tiles_by_resource[resource] = [tile]
+                        else:
+                            if tile not in self.tiles_by_resource[resource] and tile.resource == resource:
+                                self.tiles_by_resource[resource].append(tile)
 
                     resources_dict[resource] -= 1
                     if resources_dict[resource] == 0:
@@ -308,254 +363,93 @@ class CatanIsland:
                 else:
                     adj_count += 1
 
-
-    def _check_three_tile_sum(self, points, adj_tile_1, adj_tile_2):
+    def _check_adjacent_tiles(self, tile, number):
         """
-        Sum the point values of the three tiles to see if
-        the sum exceeds 12 or is less than 3.
+        Checks adjacent tiles for the proposed tile 
+        to check if any of the surrounding numbers are the same. 
+        Or if 5 or 1 point tiles are adjacent to one another
         """
-        sum_check = False
-        three_tile_sum = 0
-        three_tile_sum += points
+        points = self.num_to_points[number]
 
-        if adj_tile_1.number == None and adj_tile_2 == None:
-            if points > 1:
-                sum_check = True
-                return sum_check
+        for adj in tile.possible_adjacents:
+            # If any of the adjacent numbers have the same number, 
+            # return False
+            if adj.number == number:
+                return False
 
-
-        three_tile_sum += adj_tile_1.points
-        three_tile_sum += adj_tile_2.points
-
-        if three_tile_sum >= 3 and three_tile_sum <= 12:
-            sum_check = True
+            if points == 5 or points == 1:
+                if adj.points == points:
+                    return False
         
+        return True
 
-        return sum_check
 
-    def _reset_tile_numbers_and_points(self, tile):
+    def _place_numbers_by_resource(self, numbers_dict):
         """
-        Resets a tile back to just having a resource.
+        Places the numbers in order from 5 point tokens to
+        1 point tokens.
+        Randomize which order the resources are chosen in to make 
+        so that the board isn't the same everytime.
         """
-        self.resource_numbers[tile.resource].remove(tile.number)
-        self.resource_points[tile.resource].remove(tile.points)
-        self.total_points_per_resource[tile.resource] -= tile.points
+        # Create a list and then a queue of resources to go through until all the resources
+        # Have number tokens on them.
+        all_tiles = [tile for tile in self.position_dict.values() if tile.resource != 'Desert']
+        resources = [resource for resource in self.tiles_by_resource.keys()]
+        resources_queue = deque(resources)
+        numbers_queue = deque(self.number_placement_order)
+        
+        count = 0
 
-        tile.number = None
-        tile.points = 0
+        while len(numbers_queue) != 0:
 
-        return tile
-    
+            count += 1
+            
+            # Once the count reaches a certian threshold,
+            # remove all the number and points from the tiles
+            if count >= 100:
+            
+                for tile in all_tiles:
+                    if tile.number != None:
+                        if tile.number not in numbers_queue:
+                            numbers_queue.append(tile.number)
+                        if tile.number not in numbers_dict:
+                            numbers_dict[tile.number] = 1
+                        else:
+                            numbers_dict[tile.number] += 1
 
-    def _place_numbers(self, numbers_dict):
-        """
-        Places the resources in such a way to make the layout as balanced as possible.
-        numbers is a dictionary containing the numbers used in the game and quantity of those numbers.
-        num_to_pt_dict converts the numbers to the appropriate point value:
-        8, 6: 5 pts
-        9, 5: 4 pts
-        10, 4: 3 pts
-        11, 3: 2 pts
-        12, 2: 1 pt
-
-        Places numbers on the resource tile based on the following rules:
-        No adjacent red tiles (5pt tiles)
-        No adj 2's or 12's (1pt tiles)
-        3 tile sum: 3 <= three_tile_sum <= 12
-        no adj tiles with same numbers
-        Balances the number distribution by resource
-        """
-        convert_to_points = self.num_to_points
-
-        # Create a queue for the tiles
-        tiles = [tile for tile in self.position_dict.values()]
-        tiles_queue = deque(tiles)
-
-        # Create a list of the numbers
-        numbers = [number for number in numbers_dict.keys()]
-        # Go through all the tiles until they all have numbers 
-        # Except for the desert tiles
-        while len(tiles_queue) > 0:
-            tile = tiles_queue.popleft()
-            if tile.resource != 'Desert':
+                    tile.number = None
+                    tile.points = 0
                 count = 0
-                while tile.number == None:
-                    # If count exceed the half the original length of the 
-                    if count > 3:
-                        tiles_queue.append(tile)
-                        break
-                        
-
-                    # Selects a number from the remaining available numbers
-                    number_indx = randint(0, len(numbers) - 1)
-                    number = numbers[number_indx]
-
-                    # Gives how many points the number is equivalent to
-                    points = convert_to_points[number]
-
-                    # No same numbers for the same resource
-                    # (This may not work for bigger islands)
-                    if tile.resource in self.resource_numbers:
-                        if number in self.resource_numbers[tile.resource]: 
-                            continue
-                        
-                    # Check to make sure no resource is assigned more than a single 1 point token
-                    # Also ensure that the resource with a 1 pt token already has a 5 point token
-                    if points == 1:
-                        if tile.resource in self.resource_points:
-                            if points in self.resource_points[tile.resource]:
-                                continue
-                            # elif 5 not in self.resource_points[tile.resource]:
-                            #    continue
-
-                    # Check that no resource has a second 5 point token before all other 
-                    # resources already have a 5 point token
-                    if points == 5:
-                        tppr_dict = self.total_points_per_resource
-                        if tile.resource in self.resource_points: # This might not be the check I want
-                            if points in self.resource_points[tile.resource]:
-                                has_points = 0
-                                total_resources = len(self.resource_points) - 1
-                                for p_resource in self.resource_points.keys():
-                                    if points in self.resource_points[p_resource]:
-                                        has_points += 1
-                                if total_resources < 2 or has_points < total_resources:
-                                    # Reset the tile from the resource with the most points
-                                    max_resource = max(tppr_dict, key=tppr_dict.get)
-                                    if points in self.resource_points[max_resource]:
-                                        for max_tile in self.tiles_by_resource[max_resource]:
-                                            if points == max_tile.points:
-                                                if max_tile.number not in numbers_dict:
-                                                    numbers_dict[max_tile.number] = 1
-                                                    numbers.append(max_tile.number)
-                                                else: 
-                                                    numbers_dict[max_tile.number] += 1
-                                                    max_tile = self._reset_tile_numbers_and_points(max_tile)
-                                                    tiles_queue.append(max_tile)
-                                                    break
-                                    
-
-                            # min_points = tppr_dict[min(tppr_dict, key=tppr_dict.get)]
-                            # if tppr_dict[tile.resource] != min_points:
-                            #     continue
-                            # if len(tppr_dict) < 2:
-                            #     continue
-
-                    # Perform checks:
-                    # Check for same adjacent numbers
-                    same_num_adj = False
-                    adj_1_or_5_point_tile = False
-                    for adj in tile.possible_adjacents:
-                        if adj.number == number:
-                            same_num_adj = True
-                            # Add the number back to the numbers dict
-                            # and clear the tile
-                            if adj.number not in numbers_dict:
-                                numbers_dict[adj.number] = 1
-                                numbers.append(adj.number)
-                            else: 
-                                numbers_dict[adj.number] += 1
-                                adj_tile = self._reset_tile_numbers_and_points(adj)
-                                tiles_queue.append(adj_tile)
-                            break
-
-                    for adj in tile.possible_adjacents:
-                        if points == 1 or points == 5:
-                            if adj.points == points:
-                                adj_1_or_5_point_tile = True
-                                # Add the number back to the numbers dict
-                                # and clear the tile
-                                if adj.number not in numbers_dict:
-                                    numbers_dict[adj.number] = 1
-                                    numbers.append(adj.number)
-                                else: 
-                                    numbers_dict[adj.number] += 1
-                                    adj_tile = self._reset_tile_numbers_and_points(adj)
-                                    tiles_queue.append(adj_tile)
-                                break
-                    
-                    # If either of the conditions were true, 
-                    # pick another remaining number and try again
-                    if same_num_adj or adj_1_or_5_point_tile:
-                        continue
-
-                    # Three tile sum check: 
-                    # Ensure that no settlement spot has an adjacency of more than 12 or less than 3
-                    adj_tiles = tile.possible_adjacents
-                    # Check to see if this tile is on the edge of the island
-                    # If it is then the points value should not be 1
-                    if len(adj_tiles) <= 3:
-                        if points == 1:
-                            continue
-
-                    prev = None
-                    for adj in adj_tiles:
-                        if prev != None:
-                            sum_check = self._check_three_tile_sum(points, prev, adj)
-                            if sum_check == False:
-                                # Remove adj tile
-                                if adj.resource != 'Desert' and adj.number != None:
-                                    if adj.number not in numbers_dict:
-                                        numbers_dict[adj.number] = 1
-                                        numbers.append(adj.number)
-                                    else: 
-                                        numbers_dict[adj.number] += 1
-                                        adj_tile = self._reset_tile_numbers_and_points(adj)
-                                        tiles_queue.append(adj_tile)
-                                # Remove prev tile
-                                if prev.resource != 'Desert' and prev.number != None:
-                                    if prev.number not in numbers_dict:
-                                        numbers_dict[prev.number] = 1
-                                        numbers.append(prev.number)
-                                    else: 
-                                        numbers_dict[prev.number] += 1
-                                        prev_tile = self._reset_tile_numbers_and_points(prev)
-                                        tiles_queue.append(prev_tile)
-
-                                break
-                        prev = adj
-
-                    # If either of the condition is False, 
-                    # pick another remaining number and try again
-                    if sum_check == False:
-                        continue
                 
-                    # If all checks are passed update all the resource, number and points information
-                    # Update the numbers_dict
-                    numbers_dict[number] -= 1
-                    if numbers_dict[number] == 0:
-                        numbers_dict.pop(number)
-                        numbers.pop(number_indx)
 
-                    # Update the numbers for each resource
-                    if tile.resource in self.resource_numbers:
-                        self.resource_numbers[tile.resource].append(number)
-                    else:
-                        self.resource_numbers[tile.resource] = [number]
+            # Go through the resources and keep the number until that number is used up
+            number = numbers_queue.popleft()
+            points = self.num_to_points[number]
+            resource = resources_queue.popleft()
 
-                    # Add the points token to the resource_points dict for tracking
-                    if tile.resource in self.resource_points:
-                        self.resource_points[tile.resource].append(points)
-                    else:
-                        self.resource_points[tile.resource] = [points]
+            tiles = [tile for tile in reversed(self.tiles_by_resource[resource]) if tile.resource == resource]
+            
+            shuffle(tiles)
+            for tile in tiles:
+    
+                # TODO: Add checks for balancing
+                # Iterate through the tiles until a tile that meets the criteria is met
+                if tile.number == None:
+                    check_adjacents = self._check_adjacent_tiles(tile, number)
+                    if check_adjacents == True:
+                        tile.number = number
+                        tile.points = points
 
-                    # Update the total points for that resource
-                    if tile.resource in self.total_points_per_resource:
-                        self.total_points_per_resource[tile.resource] += points
-                    else:
-                        self.total_points_per_resource[tile.resource] = points
+                        numbers_dict[number] -= 1
+                        if numbers_dict[number] == 0:
+                            numbers_dict.pop(number)
+                        else:
+                            numbers_queue.appendleft(number)   
+                        break
 
-                    # Add the points and the number to the tile
-                    tile.number = number
-                    tile.points = points
-
-                    # Add the resource to the tile_by_resource dictionary
-                    if tile.resource not in self.tiles_by_resource:
-                        self.tiles_by_resource[tile.resource] = [tile]
-                    else:
-                        self.tiles_by_resource[tile.resource].append(tile)
-
-                    
+            if number in numbers_dict and number not in numbers_queue:
+                numbers_queue.appendleft(number) 
+            resources_queue.append(resource) 
 
 
     def print_resources(self):
@@ -590,6 +484,9 @@ class CatanIsland:
         horizontal_line_segment = '___'
         horizontal_line = horizontal_line_segment * self.horizontal
         print()
+        for resource, point_list in self.resource_points.items():
+            print(f"{resource}: {sum(point_list)}", end=' ')
+        print()
 
         for y in range(len(island)):
             for x in range(len(island[0])):
@@ -602,35 +499,172 @@ class CatanIsland:
             print(f'\n{horizontal_line}')
 
 
+    def print_resources_by_tile(self):
 
-def example():
+        for resource, tiles in self.tiles_by_resource.items():
+            tile_resources = [tile.resource for tile in tiles]
+            tile_positions = [tile.pos for tile in tiles]
 
-    three_four_player_resources = {
-        'Brick': 3,
-        'Wood': 4,
-        'Ore': 3,
-        'Grain': 4,
-        'Sheep': 4,
-        'Desert': 1,
-    }
-    three_four_player_numbers = {
-        '2': 1, 
-        '3': 2, 
-        '4': 2, 
-        '5': 2, 
-        '6': 2, 
-        '8': 2, 
-        '9': 2, 
-        '10': 2, 
-        '11': 2, 
-        '12': 1, 
-    }
+            print(f"{resource}: {tile_resources} @ {tile_positions}")
+    
+    def tiles(self):
+        """
+        Prints the position of all the tiles
+        """
+        tiles = [tile for tile in self.position_dict.values()]
+        return tiles
 
-    catan = CatanIsland(5, 3, three_four_player_resources, three_four_player_numbers)
-    catan.print_resources()
-    catan.print_numbers()
+    def calculate_points_per_resource(self):
+        """
+        Calculates how many points are allocated to each resource.
+        (For determining how balanced the board is.)
+        """
+        tiles = [tile for tile in self.position_dict.values() if tile.resource != 'Desert']
+        tppr = self.total_points_per_resource
+        for tile in tiles:
+
+            # Add up the total points to see how balanced the board is
+            if tile.resource in tppr:
+                tppr[tile.resource] += tile.points
+            else:
+                tppr[tile.resource] = tile.points
+
+        return tppr
+
+        
+
+
+
+def generate_island():
+    for x in range(100):
+        three_four_player_resources = {
+            'Brick': 3,
+            'Wood': 4,
+            'Ore': 3,
+            'Grain': 4,
+            'Sheep': 4,
+            'Desert': 1,
+        }
+        three_four_player_numbers = {
+            '2': 1, 
+            '3': 2, 
+            '4': 2, 
+            '5': 2, 
+            '6': 2, 
+            '8': 2, 
+            '9': 2, 
+            '10': 2, 
+            '11': 2, 
+            '12': 1, 
+        }
+        
+        catan = CatanIsland(5, 3, three_four_player_resources, three_four_player_numbers)
+        # Only print the resources and the numbers if the game is balanced
+        game_balance = catan.calculate_points_per_resource()
+        average_points = sum(game_balance.values()) / len(game_balance.values())
+        total_diff = 0
+        for points in game_balance.values():
+            total_diff += abs(average_points - points)
+
+        print(total_diff)
+        if total_diff < 3:
+
+            catan.print_resources()
+            catan.print_numbers()
+        # catan.print_resources_by_tile()
     
 
 
+
+class Test(unittest.TestCase):
+
+    # Test the grid to make sure that all the relationships between tiles are correctly defined.
+    # Relationships for 5, 3 (three to four player island)
+
+    tests = [
+        (5, 3),
+        (3, 2),
+    ]
+    
+    left_expected = [None, 'A2', 'A4', None, 'B1', 'B3', 'B5', None, 'C0', 'C2', 'C4', 'C6', None, 'D1', 'D3', 'D5', None, 'E2', 'E4']
+    right_expected = ['A4', 'A6', None, 'B3', 'B5', 'B7', None, 'C2', 'C4', 'C6', 'C8', None, 'D3', 'D5', 'D7', None, 'E4', 'E6', None]
+    top_left_expected = [None, None, None, None, 'A2', 'A4', 'A6', None, 'B1', 'B3', 'B5', 'B7', 'C0', 'C2', 'C4', 'C6', 'D1', 'D3', 'D5']
+    top_right_expected = [None, None, None, 'A2', 'A4', 'A6', None, 'B1', 'B3', 'B5', 'B7', None, 'C2', 'C4', 'C6', 'C8', 'D3', 'D5', 'D7']
+    bottom_left_expected = ['B1', 'B3', 'B5', 'C0', 'C2', 'C4', 'C6', None, 'D1', 'D3', 'D5', 'D7', None, 'E2', 'E4', 'E6', None, None, None]
+    bottom_right_expected = ['B3', 'B5', 'B7', 'C2', 'C4', 'C6', 'C8', 'D1', 'D3', 'D5', 'D7', None, 'E2', 'E4', 'E6', None, None, None, None]
+
+    three_four_player_test = [left_expected, right_expected, top_left_expected, top_right_expected, bottom_left_expected, bottom_right_expected]
+
+    l_exp = [None, 'A1', None, 'B0', 'B2', None, 'C1']
+    r_exp = ['A3', None, 'B2', 'B4', None, 'C3', None]
+    t_l_exp = [None, None, None, 'A1', 'A3', 'B0', 'B2']
+    t_r_exp = [None, None, 'A1', 'A3', None, 'B2', 'B4']
+    b_l_exp = ['B0', 'B2', None, 'C1', 'C3', None, None]
+    b_r_exp = ['B2', 'B4', 'C1', 'C3', None, None, None]
+
+    small_test_island = [l_exp, r_exp, t_l_exp, t_r_exp, b_l_exp, b_r_exp]
+
+    l_exp = [None, 'A3', 'A5', None, 'B2', 'B4', 'B6', None, 'C1', 'C3', 'C5', 'C7', None, 'D0', 'D2', 'D4', 'D6', 'D8', None, 'E1', 'E3', 'E5', 'E7', None, 'F2', 'F4', 'F6', None, 'G3', 'G5' ]
+    r_exp = ['A5', 'A7', None, 'B4', 'B6', 'B8', None, 'C3', 'C5', 'C7', 'C9', None, 'D2', 'D4', 'D6', 'D8', 'D10', None, 'E3', 'E5', 'E7', 'E9', None, 'F4', 'F6', 'F8', None, 'G5', 'G7', None]
+    t_l_exp = [None, None, None, None, 'A3', 'A5', 'A7', None, 'B2', 'B4', 'B6', 'B8', None, 'C1', 'C3', 'C5', 'C7', 'C9', 'D0', 'D2', 'D4', 'D6', 'D8', 'E1', 'E3', 'E5', 'E7', 'F2', 'F4', 'F6']
+    t_r_exp = [None, None, None, 'A3', 'A5', 'A7', None, 'B2', 'B4', 'B6', 'B8', None, 'C1', 'C3', 'C5', 'C7', 'C9', None, 'D2', 'D4', 'D6', 'D8', 'D10', 'E3', 'E5', 'E7', 'E9', 'F4', 'F6', 'F8']
+    b_l_exp = ['B2', 'B4', 'B6', 'C1', 'C3', 'C5', 'C7', 'D0', 'D2', 'D4', 'D6', 'D8', None, 'E1', 'E3', 'E5', 'E7', 'E9', None, 'F2', 'F4', 'F6', 'F8', None, 'G3', 'G5', 'G7', None, None, None]
+    b_r_exp = ['B4', 'B6', 'B8', 'C3', 'C5', 'C7', 'C9', 'D2', 'D4', 'D6', 'D8', 'D10', 'E1', 'E3', 'E5', 'E7', 'E9', None, 'F2', 'F4', 'F6', 'F8', None, 'G3', 'G5', 'G7', None, None, None, None]
+
+    five_six_player_test = [l_exp, r_exp, t_l_exp, t_r_exp, b_l_exp, b_r_exp]
+
+    tests = [
+        (5, 3, three_four_player_test), 
+        (3, 2, small_test_island),
+        (6, 3, five_six_player_test),
+    ]
+
+    def generate_catan_board(self, max_width, min_width):
+        catan_island = CatanIsland(max_width, min_width, {}, {})
+        actual_tiles = catan_island.tiles()
+        return actual_tiles
+
+
+    def test_catan_island_grid(self):
+        for max_w, min_w, expected in self.tests:
+            actual_tiles = self.generate_catan_board(max_w, min_w)
+
+            # test relationships
+            for actual, left, right, top_left, top_right, bottom_left, bottom_right in zip(actual_tiles, expected[0], expected[1], 
+            expected[2], expected[3], expected[4], expected[5]):
+                
+                # print(actual.pos)
+
+                if actual.left != None:
+                    assert actual.left.pos == left
+                else:
+                    assert actual.left == left
+
+                if actual.right != None:
+                    assert actual.right.pos == right
+                else:
+                    assert actual.right == right
+
+                if actual.top_left != None:
+                    assert actual.top_left.pos == top_left
+                else:
+                    assert actual.top_left == top_left
+
+                if actual.top_right != None:
+                    assert actual.top_right.pos == top_right
+                else:
+                    assert actual.top_right == top_right
+
+                if actual.bottom_left != None:
+                    assert actual.bottom_left.pos == bottom_left
+                else:
+                    assert actual.bottom_left == bottom_left
+
+                if actual.bottom_right != None:
+                    assert actual.bottom_right.pos == bottom_right
+                else:
+                    assert actual.bottom_right == bottom_right
+
+
 if __name__ == "__main__":
-    example()
+    generate_island()
