@@ -83,8 +83,8 @@ class CatanIsland:
             '12',
             '2', 
             '5', 
-            '10', 
-            '4', 
+            '4',
+            '10',  
             '11', 
             '3', 
             
@@ -383,6 +383,51 @@ class CatanIsland:
         
         return True
 
+    def _check_three_tile_sum(self, points, adj_1, adj_2):
+        """
+        Checks the adjacent tiles around the proposed tile
+        and sums the points for all three tiles.
+        If the sum is greater than a certain threshold; 12,
+        or less than 4, return False
+        Otherwise return True
+        """
+        if adj_1.number == None or adj_2.number == None:
+            if points >= 2:
+                return True
+            elif adj_1.points > 2 or adj_2.points > 2:
+                return True
+            else:
+                return False
+        three_tile_sum = 0
+        three_tile_sum += points
+        # Check if the adj tile is None, 
+        # Otherwise it will throw an error
+        three_tile_sum += adj_1.points
+        three_tile_sum += adj_2.points
+        
+        # Check if three tile sum is greater than 12 or
+        # less than 4
+        if three_tile_sum > 12 or three_tile_sum < 4:
+            return False
+        return True
+
+    def _reset_tile_numbers(self, tiles, numbers_dict, numbers_queue):
+        """
+        Resets the tiles back to before numbers were placed
+        """
+        for tile in tiles:
+            if tile.number != None:
+                if tile.number not in numbers_queue:
+                    numbers_queue.append(tile.number)
+                if tile.number not in numbers_dict:
+                    numbers_dict[tile.number] = 1
+                else:
+                    numbers_dict[tile.number] += 1
+
+            tile.number = None
+            tile.points = 0
+
+        return numbers_dict, numbers_queue
 
     def _place_numbers_by_resource(self, numbers_dict):
         """
@@ -407,7 +452,8 @@ class CatanIsland:
             # Once the count reaches a certian threshold,
             # remove all the number and points from the tiles
             if count >= 100:
-            
+                numbers_dict, numbers_queue = self._reset_tile_numbers(all_tiles, numbers_dict, numbers_queue)
+                '''
                 for tile in all_tiles:
                     if tile.number != None:
                         if tile.number not in numbers_queue:
@@ -419,6 +465,7 @@ class CatanIsland:
 
                     tile.number = None
                     tile.points = 0
+                '''
                 count = 0
                 
 
@@ -432,8 +479,6 @@ class CatanIsland:
             shuffle(tiles)
             for tile in tiles:
     
-                # TODO: Add checks for balancing
-                # Iterate through the tiles until a tile that meets the criteria is met
                 if tile.number == None:
                     check_adjacents = self._check_adjacent_tiles(tile, number)
                     if check_adjacents == True:
@@ -449,7 +494,28 @@ class CatanIsland:
 
             if number in numbers_dict and number not in numbers_queue:
                 numbers_queue.appendleft(number) 
-            resources_queue.append(resource) 
+            resources_queue.append(resource)
+
+        # Checks all the tiles to make sure all the tiles meet the three tile sum check
+        # If even one tile fails the board is re-generated.
+        for tile in all_tiles:
+
+            
+
+            prev = None
+            for adj in tile.possible_adjacents:
+
+                if prev != None:
+                    three_tile_sum_check = self._check_three_tile_sum(tile.points, adj, prev)
+                    if three_tile_sum_check == False:
+                        break
+                prev = adj
+
+            if three_tile_sum_check == False:
+                numbers_dict, numbers_queue = self._reset_tile_numbers(all_tiles, numbers_dict, numbers_queue)
+                self._place_numbers_by_resource(numbers_dict)
+
+         
 
 
     def print_resources(self):
@@ -568,11 +634,12 @@ def generate_island():
         for points in game_balance.values():
             total_diff += abs(average_points - points)
 
-        print(total_diff)
+        
         if total_diff < BALANCE_PARAMETER:
-
+            print()
             catan.print_resources()
             catan.print_numbers()
+            print()
     
 
 class Test(unittest.TestCase):
