@@ -447,28 +447,13 @@ class CatanIsland:
 
         while len(numbers_queue) != 0:
 
-            count += 1
-            
+            count += 1  
             # Once the count reaches a certian threshold,
             # remove all the number and points from the tiles
             if count >= 100:
                 numbers_dict, numbers_queue = self._reset_tile_numbers(all_tiles, numbers_dict, numbers_queue)
-                '''
-                for tile in all_tiles:
-                    if tile.number != None:
-                        if tile.number not in numbers_queue:
-                            numbers_queue.append(tile.number)
-                        if tile.number not in numbers_dict:
-                            numbers_dict[tile.number] = 1
-                        else:
-                            numbers_dict[tile.number] += 1
-
-                    tile.number = None
-                    tile.points = 0
-                '''
                 count = 0
                 
-
             # Go through the resources and keep the number until that number is used up
             number = numbers_queue.popleft()
             points = self.num_to_points[number]
@@ -515,7 +500,6 @@ class CatanIsland:
             if three_tile_sum_check == False:
                 numbers_dict, numbers_queue = self._reset_tile_numbers(all_tiles, numbers_dict, numbers_queue)
                 self._place_numbers_by_resource(numbers_dict)
-
 
     def print_resources(self):
         """
