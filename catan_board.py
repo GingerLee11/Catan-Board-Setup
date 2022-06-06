@@ -440,12 +440,6 @@ class CatanIsland:
                         tile.number = number
                         tile.points = points
 
-                        # Add up the total points to see how balanced the board is
-                        if resource in self.total_points_per_resource:
-                            self.total_points_per_resource[resource] += points
-                        else:
-                            self.total_points_per_resource[resource] = points
-
                         numbers_dict[number] -= 1
                         if numbers_dict[number] == 0:
                             numbers_dict.pop(number)
@@ -520,35 +514,65 @@ class CatanIsland:
         tiles = [tile for tile in self.position_dict.values()]
         return tiles
 
+    def calculate_points_per_resource(self):
+        """
+        Calculates how many points are allocated to each resource.
+        (For determining how balanced the board is.)
+        """
+        tiles = [tile for tile in self.position_dict.values() if tile.resource != 'Desert']
+        tppr = self.total_points_per_resource
+        for tile in tiles:
+
+            # Add up the total points to see how balanced the board is
+            if tile.resource in tppr:
+                tppr[tile.resource] += tile.points
+            else:
+                tppr[tile.resource] = tile.points
+
+        return tppr
+
+        
 
 
-def example():
-    #for x in range(100):
-    three_four_player_resources = {
-        'Brick': 3,
-        'Wood': 4,
-        'Ore': 3,
-        'Grain': 4,
-        'Sheep': 4,
-        'Desert': 1,
-    }
-    three_four_player_numbers = {
-        '2': 1, 
-        '3': 2, 
-        '4': 2, 
-        '5': 2, 
-        '6': 2, 
-        '8': 2, 
-        '9': 2, 
-        '10': 2, 
-        '11': 2, 
-        '12': 1, 
-    }
+
+def generate_island():
+    for x in range(100):
+        three_four_player_resources = {
+            'Brick': 3,
+            'Wood': 4,
+            'Ore': 3,
+            'Grain': 4,
+            'Sheep': 4,
+            'Desert': 1,
+        }
+        three_four_player_numbers = {
+            '2': 1, 
+            '3': 2, 
+            '4': 2, 
+            '5': 2, 
+            '6': 2, 
+            '8': 2, 
+            '9': 2, 
+            '10': 2, 
+            '11': 2, 
+            '12': 1, 
+        }
+        
+        catan = CatanIsland(5, 3, three_four_player_resources, three_four_player_numbers)
+        # Only print the resources and the numbers if the game is balanced
+        game_balance = catan.calculate_points_per_resource()
+        average_points = sum(game_balance.values()) / len(game_balance.values())
+        total_diff = 0
+        for points in game_balance.values():
+            total_diff += abs(average_points - points)
+
+        print(total_diff)
+        if total_diff < 3:
+
+            catan.print_resources()
+            catan.print_numbers()
+        # catan.print_resources_by_tile()
     
-    catan = CatanIsland(5, 3, three_four_player_resources, three_four_player_numbers)
-    catan.print_resources()
-    catan.print_numbers()
-    catan.print_resources_by_tile()
 
 
 
@@ -643,4 +667,4 @@ class Test(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    generate_island()
