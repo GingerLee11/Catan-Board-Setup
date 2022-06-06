@@ -531,11 +531,13 @@ class CatanIsland:
 
         return tppr
 
-        
-
-
 
 def generate_island():
+
+    # The lower this number is the more balanced the board will be; however, 
+    # the number of possible boards will also be lower
+    BALANCE_PARAMETER = 3
+
     for x in range(100):
         three_four_player_resources = {
             'Brick': 3,
@@ -567,14 +569,11 @@ def generate_island():
             total_diff += abs(average_points - points)
 
         print(total_diff)
-        if total_diff < 3:
+        if total_diff < BALANCE_PARAMETER:
 
             catan.print_resources()
             catan.print_numbers()
-        # catan.print_resources_by_tile()
     
-
-
 
 class Test(unittest.TestCase):
 
