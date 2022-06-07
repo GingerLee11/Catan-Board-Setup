@@ -61,7 +61,7 @@ class CatanIsland:
     Creates the Island of Catan using the tile class.
     """
     
-    def __init__(self, max_width, min_width, resource_dict, numbers_dict):
+    def __init__(self, max_width, min_width, resource_dict, numbers_dict, desert_center=True):
         # Constants
         self.letters = list(ascii_uppercase)
         self.num_to_points = {
@@ -76,20 +76,22 @@ class CatanIsland:
             '11': 2, 
             '12': 1, 
         }
-        self.number_placement_order = [
-            '8', 
-            '6', 
-            '9',
-            '12',
-            '2', 
-            '5', 
-            '4',
-            '10',  
-            '11', 
-            '3', 
-            
-              
-        ]
+        # Check for small island that don't use all the numbers
+        if len(numbers_dict) < 10:
+            self.number_placement_order = deque(numbers_dict.keys())
+        else:
+            self.number_placement_order = [
+                '8', 
+                '6', 
+                '9',
+                '12',
+                '2', 
+                '5', 
+                '4',
+                '10',  
+                '11', 
+                '3',          
+            ]
         
         # Tile Information:
         self.position_dict = {}
@@ -119,7 +121,7 @@ class CatanIsland:
         self.island = self._create_island()
         # For testing:
         if resource_dict != {}:
-            self._place_resources(resource_dict)
+            self._place_resources(resource_dict, desert_center)
         if numbers_dict != {}:
             self._place_numbers_by_resource(numbers_dict)
 
@@ -297,7 +299,7 @@ class CatanIsland:
                     resources.remove(tile.resource)
 
 
-        tiles = [tile for tile in self.position_dict.values() if tile.resource != 'Desert']
+        tiles = [tile for tile in self.position_dict.values()]
         tiles_queue = deque(tiles)   
 
         while len(tiles_queue) > 0:
@@ -581,50 +583,6 @@ class CatanIsland:
         return tppr
 
 
-def generate_island():
-
-    # The lower this number is the more balanced the board will be; however, 
-    # the number of possible boards will also be lower
-    BALANCE_PARAMETER = 3
-
-    for x in range(100):
-        three_four_player_resources = {
-            'Brick': 3,
-            'Wood': 4,
-            'Ore': 3,
-            'Grain': 4,
-            'Sheep': 4,
-            'Desert': 1,
-        }
-        three_four_player_numbers = {
-            '2': 1, 
-            '3': 2, 
-            '4': 2, 
-            '5': 2, 
-            '6': 2, 
-            '8': 2, 
-            '9': 2, 
-            '10': 2, 
-            '11': 2, 
-            '12': 1, 
-        }
-        
-        catan = CatanIsland(5, 3, three_four_player_resources, three_four_player_numbers)
-        # Only print the resources and the numbers if the game is balanced
-        game_balance = catan.calculate_points_per_resource()
-        average_points = sum(game_balance.values()) / len(game_balance.values())
-        total_diff = 0
-        for points in game_balance.values():
-            total_diff += abs(average_points - points)
-
-        
-        if total_diff < BALANCE_PARAMETER:
-            print()
-            catan.print_resources()
-            catan.print_numbers()
-            print()
-    
-
 class Test(unittest.TestCase):
 
     # Test the grid to make sure that all the relationships between tiles are correctly defined.
@@ -716,4 +674,4 @@ class Test(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    generate_island()
+    unittest.main()
