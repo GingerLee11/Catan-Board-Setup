@@ -61,7 +61,7 @@ class CatanIsland:
     Creates the Island of Catan using the tile class.
     """
     
-    def __init__(self, max_width, min_width, resource_dict, numbers_dict, desert_center=True):
+    def __init__(self, max_width, min_width, resource_dict, numbers_dict, desert_center=True, adj_resource_limit=2):
         # Constants
         self.letters = list(ascii_uppercase)
         self.num_to_points = {
@@ -121,7 +121,7 @@ class CatanIsland:
         self.island = self._create_island()
         # For testing:
         if resource_dict != {}:
-            self._place_resources(resource_dict, desert_center)
+            self._place_resources(resource_dict, desert_center, adj_resource_limit)
         if numbers_dict != {}:
             self._place_numbers_by_resource(numbers_dict)
 
@@ -271,7 +271,7 @@ class CatanIsland:
 
         return num_adj
     
-    def _place_resources(self, resources_dict, desert_center=True):
+    def _place_resources(self, resources_dict, desert_center=True, adj_resource_limit=1):
         """
         Places the resources in a balanced manner on the board
         given a dictionary containing the amount of each resource.
@@ -280,7 +280,7 @@ class CatanIsland:
         - No more than two resouces of the same kind next to one another.
         This includes strings of resources.
         """
-        # TODO: Add a queue or something here to prevent infinite loops
+        ADJ_RESOURCE_LIMIT = adj_resource_limit
 
         resources = [resource for resource in resources_dict.keys()]
 
@@ -290,13 +290,28 @@ class CatanIsland:
             letter = self.letters[vert]
             horz = floor(self.horizontal / 2)
             pos = f"{letter}{horz}"
-            tile = self.position_dict[pos]
-            tile.resource = 'Desert'
-            if tile.resource in resources_dict:
-                resources_dict[tile.resource] -= 1
-                if resources_dict[tile.resource] == 0:
-                    resources_dict.pop(tile.resource)
-                    resources.remove(tile.resource)
+            # Check to see if the position is in the position dictionary
+            # If it is not add 1 or subtract one until all the desert tiles are gone
+            i = 0
+            while 'Desert' in resources_dict:
+                if i % 2 == 0:
+                    horz += 1
+                else:
+                    horz -= 2
+                pos = f"{letter}{horz}"
+                if pos in self.position_dict:
+                    tile = self.position_dict[pos]
+                    if tile.resource == None:
+                        tile.resource = 'Desert'
+                        if tile.resource in resources_dict:
+                            resources_dict[tile.resource] -= 1
+                            if resources_dict[tile.resource] == 0:
+                                resources_dict.pop(tile.resource)
+                                resources.remove(tile.resource)
+                i += 1 
+                
+                
+                
 
 
         tiles = [tile for tile in self.position_dict.values()]
@@ -331,7 +346,7 @@ class CatanIsland:
                             num_adj = self._check_adjacents(adj, num_adj, resource, checked)
                         
                 # If the check is met then decrease the number of that resource by one
-                if num_adj < 2:
+                if num_adj < ADJ_RESOURCE_LIMIT:
                     tile.resource = resource
                     
                     # TODO: Find out why other resources are being added to the 
@@ -354,13 +369,15 @@ class CatanIsland:
 
                 elif adj_count > 2:
                     for adj in tile.possible_adjacents:
-                        if adj.resource not in resources_dict:
-                            resources_dict[adj.resource] = 1
-                            resources.append(adj.resource)
-                        else:
-                            resources_dict[adj.resource] += 1
-                        adj.resource = None
-                        tiles_queue.append(adj)
+                        # This prevents desert from being moved from the center
+                        if adj.resource != 'Desert':
+                            if adj.resource not in resources_dict:
+                                resources_dict[adj.resource] = 1
+                                resources.append(adj.resource)
+                            else:
+                                resources_dict[adj.resource] += 1
+                            adj.resource = None
+                            tiles_queue.append(adj)
 
                 else:
                     adj_count += 1
