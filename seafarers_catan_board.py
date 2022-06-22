@@ -86,7 +86,7 @@ class SeafarerIslands(CatanIsland):
     def _check_adjacents(self, tile, num_adj, resource, checked=None):
         return super()._check_adjacents(tile, num_adj, resource, checked)
     
-    def _place_resources(self, resources_dict, main_island_resources, adj_resource_limit=2, 
+    def _place_resources(self, resources_dict, main_island_resources, adj_resource_limit=1, 
         main_island_center=False, main_island_dimension=(5, 3), main_island_desert_center=True, 
         num_islands=4, dead_tiles=['Desert', 'Sea', None]):
         """
@@ -125,7 +125,7 @@ class SeafarerIslands(CatanIsland):
                             resources.remove(tile.resource)
         
         # Generate the main island
-        mini_catan = CatanIsland(main_island_dimension[0], main_island_dimension[1], main_island_resources, {}, main_island_desert_center, adj_resource_limit)
+        mini_catan = CatanIsland(main_island_dimension[0], main_island_dimension[1], main_island_resources, {}, main_island_desert_center, 2)
         main_island = deque([tile for tile in mini_catan.position_dict.values()])
 
         # Create resources list
@@ -198,26 +198,42 @@ class SeafarerIslands(CatanIsland):
         # Creates an island, surrounds it with sea, and repeats until all the land tiles are used up
         # Then fill in the rest of the board with sea tiles until all the tiles are used.
         # Set a max allowable size for an island determined by how many tiles are left available
-        while len(tiles_queue) > 0:
+        max_island_size = floor((len(tiles_queue) - resources_dict['Sea']) / num_islands)
 
-            max_island_size = floor(len(tiles_queue) / num_islands)
+
+        while len(tiles_queue) > 0:
+           
             # Check to make sure there are actually enough tiles to create
             # an island of the randomly generated size
             if len(tiles_queue) < max_island_size:
                 max_island_size = len(tiles_queue)
-            island_size = randint(1, max_island_size)
+            if max_island_size > 1:
+                island_size = randint(2, max_island_size)
+            else:
+                island_size = 1
             island_queue = deque([tiles_queue.popleft()])
             checked = []
             # Add nearby tiles to create a island that is 
             # Smaller than the limit
+            sea_count = 0
+            j = 0
             while len(island_queue) < island_size:
+                if sea_count > 4:
+                    break
+                if j > 10:
+                    break
                 for adj in tile.possible_adjacents:
+                    if adj.resource == 'Sea':
+                        sea_count += 1
                     if adj not in checked:
                         checked.append(adj)
                         if adj.resource == None:
                             island_queue.append(adj)
-                            tile = adj
-                            break
+                            
+                island_queue.appendleft(tile)
+                tile = island_queue.pop()
+
+                j += 1
 
             # Add resources to the tiles
             # while making sure to meet adjacency rules
@@ -398,7 +414,7 @@ def example():
 
 
     board = SeafarerIslands(9, 5, extension_and_seafarers_resources, three_four_player_resources, 
-    extension_and_seafarers_numbers, 2, False, (5, 3))
+    extension_and_seafarers_numbers, 1, False, (5, 3))
     board.print_resources()
     board.print_numbers()
 
