@@ -200,7 +200,6 @@ class SeafarerIslands(CatanIsland):
         # Set a max allowable size for an island determined by how many tiles are left available
         max_island_size = floor((len(tiles_queue) - resources_dict['Sea']) / num_islands)
 
-
         while len(tiles_queue) > 0:
            
             # Check to make sure there are actually enough tiles to create
@@ -211,7 +210,7 @@ class SeafarerIslands(CatanIsland):
                 island_size = randint(2, max_island_size)
             else:
                 island_size = 1
-            island_queue = deque([tiles_queue.popleft()])
+            island_queue = deque([tiles_queue.pop()])
             checked = []
             # Add nearby tiles to create a island that is 
             # Smaller than the limit
@@ -283,7 +282,7 @@ class SeafarerIslands(CatanIsland):
                     
                     elif adj_count > 2:
                         for adj in tile.possible_adjacents:
-                            # This prevents desert from being moved from the center
+                            # This prevents sea and desert tiles from being moved
                             if adj.resource not in dead_tiles:
                                 if adj.resource not in resources_dict:
                                     resources_dict[adj.resource] = 1
@@ -291,7 +290,7 @@ class SeafarerIslands(CatanIsland):
                                 else:
                                     resources_dict[adj.resource] += 1
                                 adj.resource = None
-                                tiles_queue.append(adj)
+                                island_queue.append(adj)
 
                     else:
                         adj_count += 1
@@ -316,11 +315,12 @@ class SeafarerIslands(CatanIsland):
             # TODO: Add a check to see if there are only sea tiles remaining
             if len(resources) == 0:
                 for tile in tiles_queue:
-                    tile.resource = 'Sea'
-                    if tile.resource in resources_dict:
-                        resources_dict[tile.resource] -= 1
-                        if resources_dict[tile.resource] == 0:
-                            resources_dict.pop(tile.resource)
+                    if tile.resource == None:
+                        tile.resource = 'Sea'
+                        if tile.resource in resources_dict:
+                            resources_dict[tile.resource] -= 1
+                            if resources_dict[tile.resource] == 0:
+                                resources_dict.pop(tile.resource)
 
 
     # TODO: Write a method for placing numbers on the island resources
