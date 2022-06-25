@@ -228,7 +228,13 @@ class SeafarerIslands(CatanIsland):
                                 resources_dict.pop(tile.resource)
                         break
         
-        sea_tiles = deque(tile for tile in tiles_queue if tile.resource == 'Sea')
+        sea_tiles = [tile for tile in tiles_queue if tile.resource == 'Sea']
+        # Randomize the sea tiles:
+        if len(sea_tiles) > 1:
+            for x in range(len(sea_tiles)):
+                sea_int = randint(0, len(sea_tiles) - 1)
+                sea_tiles = sea_tiles[sea_int:] + sea_tiles[:sea_int]
+        sea_tiles = deque(sea_tiles)
         tiles_queue = deque(tile for tile in tiles_queue if tile.resource == None)
 
         # Create sea channels to split up islands
@@ -297,7 +303,7 @@ class SeafarerIslands(CatanIsland):
                     sea_letters.add(let_upper)
                     sea_letters.add(let_lower)
                     num_upper = num_lower = sea_number
-                    for x in range(2):
+                    for x in range(3):
                         num_upper += 1
                         sea_numbers.add(str(num_upper))
                         num_lower -= 1

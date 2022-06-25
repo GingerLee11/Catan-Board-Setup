@@ -101,16 +101,12 @@ class CatanIsland:
         self.resource_points = {}
         self.resources_dict = resource_dict
         self.numbers_dict = numbers_dict
-
-        # TODO: Create resource point dict
-        # In order to find the resource with the current lowest point total
         
         # inputs
         self.max_width = max_width
         self.min_width = min_width
         self.resources = resource_dict
         self.numbers = numbers_dict
-
 
         # Reference variables
         self.diff = self.max_width - self.min_width
@@ -159,7 +155,7 @@ class CatanIsland:
         horizontal = max_width + (max_width - 1)
         offset = diff
         horizontal = self.max_width + (self.max_width - 1)
-
+        middle = floor(len(grid) / 2)
         for y in range(len(grid)):
             # Create the board offsets 
             # Since the island is a hexagon
@@ -171,78 +167,81 @@ class CatanIsland:
 
                 tile = grid[y][x]
 
-                # There are no top_left or top_right tiles
+                # Top of the board: 
                 if y == 0:
-                    tile.bottom_left = grid[y + 1][x - 1]
+                    # All top tiles have these relationships
                     tile.bottom_right = grid[y + 1][x + 1]
-                    # On the far left side
-                    if x <= diff:
+                    tile.bottom_left = grid[y + 1][x - 1]
+                    # In the unlikely event that the minimum width is 1
+                    if min_width == 1:
+                        continue
+                    # Top of the board on the left corner
+                    elif x == middle - y:
                         tile.right = grid[y][x + 2]
-                    # On the far right side
-                    elif x >= (horizontal - 1) - diff:
+                    # Top of the board on the right corner
+                    elif x == (horizontal - 1) - middle + y: 
                         tile.left = grid[y][x - 2]
                     else:
                         tile.right = grid[y][x + 2]
                         tile.left = grid[y][x - 2]
-
-                # If the tile is at the bottom of the board
-                elif y == len(grid) -  1:
-                    tile.top_left = grid[y - 1][x - 1]
-                    tile.top_right = grid[y - 1][x + 1]
-                    # On the far left side
-                    if x <= diff:
-                        tile.right = grid[y][x + 2]
-                    # On the far right side
-                    elif x >= (horizontal - 1) - diff:
-                        tile.left = grid[y][x - 2]
-                    else:
-                        tile.right = grid[y][x + 2]
-                        tile.left = grid[y][x - 2]
-
-                # If the tile is in the middle row of the island
-                elif y == floor(len(grid) / 2):
+                
+                # Left and right middle edges
+                elif y == middle and (x == 0 or x == horizontal - 1):
                     if x == 0:
                         tile.right = grid[y][x + 2]
                         tile.top_right = grid[y - 1][x + 1]
                         tile.bottom_right = grid[y + 1][x + 1]
-                    elif x == (horizontal - 1):
+                    if x == horizontal - 1:
                         tile.left = grid[y][x - 2]
                         tile.top_left = grid[y - 1][x - 1]
                         tile.bottom_left = grid[y + 1][x - 1]
-                    else:
+
+                # Bottom of the board
+                elif y == len(grid) - 1:
+                    # All bottom tiles have these relationships
+                    tile.top_right = grid[y - 1][x + 1]
+                    tile.top_left = grid[y - 1][x - 1]
+                    if min_width == 1:
+                        continue
+                    # Left corner on the bottom of the board
+                    elif x == abs(middle - y):
                         tile.right = grid[y][x + 2]
-                        tile.top_right = grid[y - 1][x + 1]
-                        tile.bottom_right = grid[y + 1][x + 1]
+                    # Right corner on the bottom of the board
+                    elif x == (horizontal - 1) + middle - y:
                         tile.left = grid[y][x - 2]
-                        tile.top_left = grid[y - 1][x - 1]
-                        tile.bottom_left = grid[y + 1][x - 1]
-
-
-                # If the tile is at the far left side, but not top or bottom or middle
-                elif x < diff:
+                    else:
+                        tile.left = grid[y][x - 2]
+                        tile.right = grid[y][x + 2]
+                
+                # Left edge of the board above middle
+                elif x == middle - y:
                     tile.right = grid[y][x + 2]
                     tile.top_right = grid[y - 1][x + 1]
                     tile.bottom_right = grid[y + 1][x + 1]
-                    # Only include the top_left tile if 
-                    # more than halfway down the board
-                    if y > floor(len(grid) / 2):
-                        tile.top_left = grid[y - 1][x - 1]
-                    elif y < floor(len(grid) / 2):
-                        tile.bottom_left = grid[y + 1][x - 1]
+                    tile.bottom_left = grid[y + 1][x - 1]
 
-                # Tile on the far right side, but not top or bottom or middle
-                elif x > (horizontal - 1) - diff:
+                # Left edge of the board below middle
+                elif x == abs(middle - y):
+                    tile.right = grid[y][x + 2]
+                    tile.top_right = grid[y - 1][x + 1]
+                    tile.bottom_right = grid[y + 1][x + 1]
+                    tile.top_left = grid[y - 1][x - 1]
+
+                # Right edge of the board above middle
+                elif x == (horizontal - 1) - middle + y: # Subtract 1 to get the number of tiles at the middle
                     tile.left = grid[y][x - 2]
                     tile.top_left = grid[y - 1][x - 1]
                     tile.bottom_left = grid[y + 1][x - 1]
-                    # Only include the top_left tile if 
-                    # less than halfway down the board
-                    if y < floor(len(grid) / 2):
-                        tile.bottom_right = grid[y + 1][x + 1]
-                    elif y > floor(len(grid) / 2):
-                        tile.top_right = grid[y - 1][x + 1]
-                    
+                    tile.bottom_right = grid[y + 1][x + 1]
 
+                # Right edge of the board below middle
+                elif x == (horizontal - 1) + middle - y:
+                    tile.left = grid[y][x - 2]
+                    tile.top_left = grid[y - 1][x - 1]
+                    tile.bottom_left = grid[y + 1][x - 1]
+                    tile.top_right = grid[y - 1][x + 1]
+
+                # All center tiles
                 else:
                     tile.right = grid[y][x + 2]
                     tile.top_right = grid[y - 1][x + 1]
@@ -250,7 +249,6 @@ class CatanIsland:
                     tile.left = grid[y][x - 2]
                     tile.top_left = grid[y - 1][x - 1]
                     tile.bottom_left = grid[y + 1][x - 1]
-                    
 
                 tile.possible_adjacents = tile._check_possible_adjacents()
                 self.position_dict[tile.pos] = tile
@@ -271,7 +269,7 @@ class CatanIsland:
 
         return num_adj
     
-    def _place_resources(self, resources_dict, desert_center=True, adj_resource_limit=1):
+    def _place_resources(self, resources_dict, desert_center=True, adj_resource_limit=2, dead_tiles=['Desert', 'Sea']):
         """
         Places the resources in a balanced manner on the board
         given a dictionary containing the amount of each resource.
@@ -355,7 +353,7 @@ class CatanIsland:
                     # WHYYYYYYYYYYY????????? WTH!
 
                     # Add the tile to the tiles by resource dictionary
-                    if tile.resource != None and resource != 'Desert' and tile.resource != 'Desert':
+                    if tile.resource != None and resource not in dead_tiles and tile.resource not in dead_tiles:
                         if resource not in self.tiles_by_resource:
                             self.tiles_by_resource[resource] = [tile]
                         else:
@@ -448,7 +446,7 @@ class CatanIsland:
 
         return numbers_dict, numbers_queue
 
-    def _place_numbers_by_resource(self, numbers_dict):
+    def _place_numbers_by_resource(self, numbers_dict, dead_tiles=['Desert', 'Sea']):
         """
         Places the numbers in order from 5 point tokens to
         1 point tokens.
@@ -457,7 +455,7 @@ class CatanIsland:
         """
         # Create a list and then a queue of resources to go through until all the resources
         # Have number tokens on them.
-        all_tiles = [tile for tile in self.position_dict.values() if tile.resource != 'Desert']
+        all_tiles = [tile for tile in self.position_dict.values() if tile.resource not in dead_tiles]
         resources = [resource for resource in self.tiles_by_resource.keys()]
         resources_queue = deque(resources)
         numbers_queue = deque(self.number_placement_order)
@@ -604,11 +602,6 @@ class Test(unittest.TestCase):
 
     # Test the grid to make sure that all the relationships between tiles are correctly defined.
     # Relationships for 5, 3 (three to four player island)
-
-    tests = [
-        (5, 3),
-        (3, 2),
-    ]
     
     left_expected = [None, 'A2', 'A4', None, 'B1', 'B3', 'B5', None, 'C0', 'C2', 'C4', 'C6', None, 'D1', 'D3', 'D5', None, 'E2', 'E4']
     right_expected = ['A4', 'A6', None, 'B3', 'B5', 'B7', None, 'C2', 'C4', 'C6', 'C8', None, 'D3', 'D5', 'D7', None, 'E4', 'E6', None]
@@ -637,10 +630,81 @@ class Test(unittest.TestCase):
 
     five_six_player_test = [l_exp, r_exp, t_l_exp, t_r_exp, b_l_exp, b_r_exp]
 
+    r_exp = [
+        'A6', 'A8', 'A10', 'A12', None, 
+        'B5', 'B7', 'B9', 'B11', 'B13', None,
+        'C4', 'C6', 'C8', 'C10', 'C12', 'C14', None, 
+        'D3', 'D5', 'D7', 'D9', 'D11', 'D13', 'D15', None,
+        'E2', 'E4', 'E6', 'E8', 'E10', 'E12', 'E14', 'E16', None, 
+        'F3', 'F5', 'F7', 'F9', 'F11', 'F13', 'F15', None,
+        'G4', 'G6', 'G8', 'G10', 'G12', 'G14', None, 
+        'H5', 'H7', 'H9', 'H11', 'H13', None, 
+        'I6', 'I8', 'I10', 'I12', None,
+        ]
+    l_exp = [
+        None, 'A4', 'A6', 'A8', 'A10', 
+        None, 'B3', 'B5', 'B7', 'B9', 'B11',
+        None, 'C2', 'C4', 'C6', 'C8', 'C10', 'C12', 
+        None, 'D1', 'D3', 'D5', 'D7', 'D9', 'D11', 'D13', 
+        None, 'E0', 'E2', 'E4', 'E6', 'E8', 'E10', 'E12', 'E14', 
+        None, 'F1', 'F3', 'F5', 'F7', 'F9', 'F11', 'F13', 
+        None, 'G2', 'G4', 'G6', 'G8', 'G10', 'G12', 
+        None, 'H3', 'H5', 'H7', 'H9', 'H11', 
+        None, 'I4', 'I6', 'I8', 'I10',
+        ]
+    t_l_exp = [
+        None, None, None, None, None, 
+        None, 'A4', 'A6', 'A8', 'A10', 'A12',
+        None, 'B3', 'B5', 'B7', 'B9', 'B11', 'B13',
+        None, 'C2', 'C4', 'C6', 'C8', 'C10', 'C12', 'C14',
+        None, 'D1', 'D3', 'D5', 'D7', 'D9', 'D11', 'D13', 'D15',
+        'E0', 'E2', 'E4', 'E6', 'E8', 'E10', 'E12', 'E14', 
+        'F1', 'F3', 'F5', 'F7', 'F9', 'F11', 'F13', 
+        'G2', 'G4', 'G6', 'G8', 'G10', 'G12', 
+        'H3', 'H5', 'H7', 'H9', 'H11', 
+        ]
+    t_r_exp = [
+        None, None, None, None, None, 
+        'A4', 'A6', 'A8', 'A10', 'A12', None,
+        'B3', 'B5', 'B7', 'B9', 'B11', 'B13', None,
+        'C2', 'C4', 'C6', 'C8', 'C10', 'C12', 'C14', None, 
+        'D1', 'D3', 'D5', 'D7', 'D9', 'D11', 'D13', 'D15', None,
+        'E2', 'E4', 'E6', 'E8', 'E10', 'E12', 'E14', 'E16', 
+        'F3', 'F5', 'F7', 'F9', 'F11', 'F13', 'F15',
+        'G4', 'G6', 'G8', 'G10', 'G12', 'G14', 
+        'H5', 'H7', 'H9', 'H11', 'H13',
+    ]
+    b_l_exp = [
+        'B3', 'B5', 'B7', 'B9', 'B11',
+        'C2', 'C4', 'C6', 'C8', 'C10', 'C12',
+        'D1', 'D3', 'D5', 'D7', 'D9', 'D11', 'D13', 
+        'E0', 'E2', 'E4', 'E6', 'E8', 'E10', 'E12', 'E14', 
+        None, 'F1', 'F3', 'F5', 'F7', 'F9', 'F11', 'F13', 'F15', 
+        None, 'G2', 'G4', 'G6', 'G8', 'G10', 'G12', 'G14',
+        None, 'H3', 'H5', 'H7', 'H9', 'H11', 'H13',
+        None, 'I4', 'I6', 'I8', 'I10', 'I12',
+        None, None, None, None, None, 
+    ]
+    b_r_exp = [
+        'B5', 'B7', 'B9', 'B11', 'B13',
+        'C4', 'C6', 'C8', 'C10', 'C12', 'C14',  
+        'D3', 'D5', 'D7', 'D9', 'D11', 'D13', 'D15',
+        'E2', 'E4', 'E6', 'E8', 'E10', 'E12', 'E14', 'E16', 
+        'F1', 'F3', 'F5', 'F7', 'F9', 'F11', 'F13', 'F15', None,
+        'G2', 'G4', 'G6', 'G8', 'G10', 'G12', 'G14', None, 
+        'H3', 'H5', 'H7', 'H9', 'H11', 'H13', None,
+        'I4', 'I6', 'I8', 'I10', 'I12', None,
+        None, None, None, None, None, 
+    ]
+
+
+    seafarers_w_ext_board_pieces = [l_exp, r_exp, t_l_exp, t_r_exp, b_l_exp, b_r_exp]
+
     tests = [
         (5, 3, three_four_player_test), 
         (3, 2, small_test_island),
         (6, 3, five_six_player_test),
+        (9, 5, seafarers_w_ext_board_pieces),
     ]
 
     def generate_catan_board(self, max_width, min_width):
