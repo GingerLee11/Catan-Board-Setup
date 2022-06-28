@@ -12,7 +12,7 @@ from catan_board import CatanIsland
 class SeafarerIslands(CatanIsland):
     
     def __init__(self, max_width, min_width, 
-            resource_dict, main_island_resources, numbers_dict,
+            resource_dict, main_island_resources, main_island_numbers_dict, small_islands_numbers_dict, 
             adj_resource_limit=2, main_island_center=False, main_island_dimensions=(5, 3)):
         
         # Constants
@@ -68,10 +68,22 @@ class SeafarerIslands(CatanIsland):
             '12': 1, 
         }
         # Check for small island that don't use all the numbers
-        if len(numbers_dict) < 10:
-            self.number_placement_order = deque(numbers_dict.keys())
+        if len(small_islands_numbers_dict) < 10:
+            self.small_islands_number_placement_order = deque(small_islands_numbers_dict.keys())
         else:
-            self.number_placement_order = [
+            self.small_islands_number_placement_order = [
+                '8', 
+                '12', 
+                '2',
+                '9',
+                '5', 
+                '4',
+                '6', 
+                '10',  
+                '11', 
+                '3',          
+            ]
+        self.number_placement_order = [
                 '8', 
                 '12', 
                 '2',
@@ -88,17 +100,20 @@ class SeafarerIslands(CatanIsland):
         self.position_dict = {}
         self.main_island_position_dict = {}
         self.main_island_tiles_by_resource = {}
+        self.small_islands_position_dict = {}
+        self.small_islands_tiles_by_resource = {}
         self.total_points_per_resource = {}
         self.resource_numbers = {}
         self.resource_points = {}
         self.resources_dict = resource_dict
-        self.numbers_dict = numbers_dict
+        self.main_island_numbers_dict = main_island_numbers_dict
         
         # inputs
         self.max_width = max_width
         self.min_width = min_width
         self.resources = resource_dict
-        self.numbers = numbers_dict
+        self.main_island_numbers = main_island_numbers_dict
+        self.small_island_numbers_dict = small_islands_numbers_dict
 
         # Reference variables
         self.diff = self.max_width - self.min_width
@@ -111,8 +126,9 @@ class SeafarerIslands(CatanIsland):
             self._place_resources(resource_dict, main_island_resources, 
                 adj_resource_limit,
                 main_island_center, main_island_dimensions)
-        if numbers_dict != {}:
-            self._place_numbers_by_resource(numbers_dict)
+        if main_island_numbers_dict != {} and small_islands_numbers_dict != {}:
+            self._place_numbers_by_resource_main_island(main_island_numbers_dict)
+            self._place_numbers_by_resource_smaller_islands(small_islands_numbers_dict)
 
     def _create_island(self):
         return super()._create_island()
@@ -300,6 +316,8 @@ class SeafarerIslands(CatanIsland):
                             resources_dict.pop(resource)
                             resources.pop(resource_indx)
 
+
+
                     elif adj_count > 5:
                         for tile in island:
                             # This prevents sea tiles from being moved around
@@ -353,7 +371,6 @@ class SeafarerIslands(CatanIsland):
                             if resources_dict[adj.resource] == 0:
                                 resources_dict.pop(adj.resource)
 
-            self.print_resources()
             island_count += 1
             # Randomize the tiles before creating each new island
             tiles = [tile for tile in tiles if tile.resource == None]
@@ -376,6 +393,19 @@ class SeafarerIslands(CatanIsland):
                     resources_dict['Sea'] -= 1
                     if resources_dict['Sea'] == 0:
                         resources_dict.pop('Sea')
+
+        for tile in self.position_dict.values():
+            if tile.pos not in self.main_island_position_dict:
+                if tile.resource not in dead_tiles:
+                    self.small_islands_position_dict[tile.pos] = tile
+                    # Add the tile to the tiles by resource dictionary
+                    if tile.resource not in self.small_islands_tiles_by_resource:
+                        self.small_islands_tiles_by_resource[tile.resource] = [tile]
+                    else:
+                        if tile not in self.small_islands_tiles_by_resource[tile.resource]:
+                            self.small_islands_tiles_by_resource[tile.resource].append(tile)
+
+
 
         self.print_resources()
 
@@ -447,9 +477,9 @@ class SeafarerIslands(CatanIsland):
         return True
 
     
-    def _place_numbers_by_resource(self, numbers_dict, dead_tiles=['Desert', 'Sea', None]):
+    def _place_numbers_by_resource_main_island(self, numbers_dict, dead_tiles=['Desert', 'Sea', None]):
         """
-        Places numbers by resource on all the tiles on the main island and all the smaller islands.
+        Places numbers by resource on all the tiles on the main island.
         """
         # Create a list and then a queue of resources to go through until all the resources
         # Have number tokens on them.
@@ -515,12 +545,90 @@ class SeafarerIslands(CatanIsland):
             if three_tile_sum_check == False:
                 # self.print_numbers()
                 numbers_dict, numbers_queue = self._reset_tile_numbers(main_island_tiles, numbers_dict, numbers_queue)
-                self._place_numbers_by_resource(numbers_dict)
+                self._place_numbers_by_resource_main_island(numbers_dict)
 
 
+    def _place_numbers_by_resource_smaller_islands(self, numbers_dict, dead_tiles=['Desert', 'Sea', None]):
+        """
+        Places numbers on the outlying smaller islands.
+        """
+        # Create a list and then a queue of resources to go through until all the resources
+        # Have number tokens on them.
+        small_islands_tiles = [tile for tile in self.small_islands_position_dict.values() if tile.resource not in dead_tiles]
+        resources = [resource for resource in self.small_islands_tiles_by_resource.keys() if resource not in dead_tiles]
+        resources_queue = deque(resources)
+        numbers_queue = deque(self.small_islands_number_placement_order)
+        
+        count = 0
+        all_have_numbers = False
+        while len(numbers_queue) != 0 and all_have_numbers == False:
 
+            count += 1  
+            # Once the count reaches a certian threshold,
+            # remove all the number and points from the tiles
+            if count >= 500:
+                # Check to see if all the tiles have numbers
+                # This is because the number of island tiles can 
+                # vary depending on the small islands generation
+                no_numbers = []
+                for tile in self.small_islands_position_dict.values():
+                    if tile.number == None:
+                        no_numbers.append(tile)
+                if len(no_numbers) == 0:
+                    all_have_numbers = True
+                else:
+                    numbers_dict, numbers_queue = self._reset_tile_numbers(small_islands_tiles, numbers_dict, numbers_queue)
+                    count = 0
+                
+            # Go through the resources and keep the number until that number is used up
+            number = numbers_queue.popleft()
+            points = self.num_to_points[number]
+            resource = resources_queue.popleft()
 
+            tiles = [tile for tile in reversed(self.small_islands_tiles_by_resource[resource]) if tile.resource == resource]
+            
+            shuffle(tiles)
+            for tile in tiles:
     
+                if tile.number == None:
+                    check_adjacents = self._check_adjacent_tiles(tile, number, resources)
+                    if check_adjacents == True:
+                        tile.number = number
+                        tile.points = points
+
+                        numbers_dict[number] -= 1
+                        if numbers_dict[number] == 0:
+                            numbers_dict.pop(number)
+                        else:
+                            numbers_queue.appendleft(number)   
+                        break
+
+            if number in numbers_dict and number not in numbers_queue:
+                numbers_queue.appendleft(number) 
+            resources_queue.append(resource)
+
+        # Checks all the tiles to make sure all the tiles meet the three tile sum check
+        # If even one tile fails the board is re-generated.
+        for tile in small_islands_tiles:
+
+            prev = None
+            for adj in tile.possible_adjacents:
+                # Checks three tiles at a time
+                # so this skips the first iteration
+                # which would only check two tiles
+                if prev != None:
+                    three_tile_sum_check = self._check_three_tile_sum(tile.points, adj, prev)
+                    if three_tile_sum_check == False:
+                        break
+                prev = adj
+            # If one of the tile checks is False 
+            # start over from scratch
+            if three_tile_sum_check == False:
+                self.print_numbers()
+                numbers_dict, numbers_queue = self._reset_tile_numbers(small_islands_tiles, numbers_dict, numbers_queue)
+                self._place_numbers_by_resource_smaller_islands(numbers_dict)
+
+
     def print_resources(self):
         """
         Prints where the resources are on the islands.
@@ -594,17 +702,15 @@ def example():
         '11': 2, 
         '12': 1, 
     }
-    extension_and_seafarers_numbers = {
-        '2': 3, 
-        '3': 4, 
-        '4': 4, 
-        '5': 4, 
-        '6': 4, 
-        '8': 4, 
-        '9': 4, 
-        '10': 4, 
-        '11': 4, 
-        '12': 2, 
+    small_islands_numbers = {
+        '3': 2, 
+        '4': 2, 
+        '5': 3, 
+        '6': 2, 
+        '8': 2, 
+        '9': 3, 
+        '10': 2, 
+        '11': 2,  
     }
     three_four_player_resources = {
         'Brick': 3,
@@ -617,7 +723,7 @@ def example():
 
 
     board = SeafarerIslands(9, 5, extension_and_seafarers_resources, three_four_player_resources, 
-    main_island_numbers, 1, False, (5, 3))
+    main_island_numbers, small_islands_numbers, 1, False, (5, 3))
     board.print_resources()
     board.print_numbers()
 
