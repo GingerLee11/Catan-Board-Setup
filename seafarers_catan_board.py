@@ -13,7 +13,7 @@ class SeafarerIslands(CatanIsland):
     
     def __init__(self, max_width, min_width, 
             resource_dict, main_island_resources, main_island_numbers_dict, small_islands_numbers_dict, 
-            adj_resource_limit=2, main_island_center=False, main_island_dimensions=(5, 3)):
+            adj_resource_limit=2, main_island_center=False, main_island_dimensions=(5, 3), main_island_desert_center=True):
         
         # Constants
         self.letters = list(ascii_uppercase)
@@ -125,7 +125,7 @@ class SeafarerIslands(CatanIsland):
         if resource_dict != {}:
             self._place_resources(resource_dict, main_island_resources, 
                 adj_resource_limit,
-                main_island_center, main_island_dimensions)
+                main_island_center, main_island_dimensions, main_island_desert_center)
         if main_island_numbers_dict != {} and small_islands_numbers_dict != {}:
             self._place_numbers_by_resource_main_island(main_island_numbers_dict)
             self._place_numbers_by_resource_smaller_islands(small_islands_numbers_dict)
@@ -139,7 +139,7 @@ class SeafarerIslands(CatanIsland):
     
     def _place_resources(self, resources_dict, main_island_resources, adj_resource_limit=1, 
         main_island_center=False, main_island_dimension=(5, 3), main_island_desert_center=True, 
-        num_islands=4, dead_tiles=['Desert', 'Sea', None], sea_letters = set(['A', 'B'])):
+        num_islands=4, dead_tiles=['Desert', 'Sea', None]):
         """
         Places the resources in a balanced manner on the board
         given a dictionary containing the amount of each resource.
@@ -174,7 +174,7 @@ class SeafarerIslands(CatanIsland):
                             resources.remove(tile.resource)
         
         # Generate the main island
-        mini_catan = CatanIsland(main_island_dimension[0], main_island_dimension[1], main_island_resources, {}, main_island_desert_center, 2)
+        mini_catan = CatanIsland(main_island_dimension[0], main_island_dimension[1], main_island_resources, {}, main_island_desert_center, 1)
         main_island = deque([tile for tile in mini_catan.position_dict.values()])
 
         # Create resources list
@@ -186,7 +186,66 @@ class SeafarerIslands(CatanIsland):
         # Place the island in its proper place.
         if main_island_center == True:
             # TODO: Write code to place the island in the center of the board.
-            pass
+            main_island_horz = main_island_dimension[0]
+            main_island_vert = mini_catan.vertical
+            big_board_horz = self.horizontal
+            big_board_vert = self.vertical
+
+            # Find the position of where the first tile of the main island will go on the board
+            vert_pos = floor(big_board_vert / 2) - floor(main_island_vert / 2)
+            letter = self.letters[vert_pos]
+            horz_pos = floor(big_board_horz / 2) - floor(main_island_horz / 2)
+            
+            pos = f"{letter}{horz_pos}"
+            while pos not in self.position_dict:
+                horz_pos -= 1
+                pos = f"{letter}{horz_pos}"    
+            main_island_horz = main_island_dimension[1]
+            i = 0
+            while len(main_island) > 0:
+                tile = self.position_dict[pos]
+                for x in range(main_island_horz):
+                    main_island_tile = main_island.popleft()
+                    # Assign resource
+                    tile.resource = main_island_tile.resource
+                    # Add tile to the main island position dictionary
+                    self.main_island_position_dict[tile.pos] = tile
+                    # Decrease the total resources
+                    resources_dict[tile.resource] -= 1
+                    if resources_dict[tile.resource] == 0:
+                        resources_dict.pop(tile.resource)
+
+                    # Add the tile to the tiles by resource dictionary
+                    if tile.resource != None:
+                        if tile.resource not in self.main_island_tiles_by_resource:
+                            self.main_island_tiles_by_resource[tile.resource] = [tile]
+                        else:
+                            if tile not in self.main_island_tiles_by_resource[tile.resource]:
+                                self.main_island_tiles_by_resource[tile.resource].append(tile)
+
+                    # Increment the tile position by two 
+                    # Since each horizontal tile is offset by two
+                    horz_pos += 2
+                    pos = f"{letter}{horz_pos}"
+                    tile = self.position_dict[pos]
+
+                # Bring the horizontal position back to the start of the island
+                # For the next row
+                horz_pos -= (main_island_horz * 2)
+                if i < mini_catan.diff:
+                    horz_pos -= 1
+                    main_island_horz += 1
+                else:
+                    horz_pos += 1
+                    main_island_horz -= 1
+                # Change the letter down to the next row
+                letter_pos = self.letter_to_number[letter]
+                letter = self.number_to_letter[letter_pos + 1]
+
+                # Define new tile
+                pos = f"{letter}{horz_pos}"
+                i += 1
+
         else:
             main_island_horz = main_island_dimension[1]
             big_board_horz = self.min_width
@@ -196,7 +255,7 @@ class SeafarerIslands(CatanIsland):
                 for x in range(main_island_horz):
                     main_island_tile = main_island.popleft()
                     tile = tiles_queue.popleft()
-                    # Asign resource
+                    # Assign resource
                     tile.resource = main_island_tile.resource
                     # Add tile to the main island position dictionary
                     self.main_island_position_dict[tile.pos] = tile
@@ -460,8 +519,8 @@ class SeafarerIslands(CatanIsland):
                 return True
             elif adj_1.points > 2 or adj_2.points > 2:
                 return True
-            else:
-                return False
+            elif adj_1.number == None and adj_2.number == None:
+                return True
         three_tile_sum = 0
         three_tile_sum += points
         # Check if the adj tile is None, 
@@ -670,7 +729,7 @@ class SeafarerIslands(CatanIsland):
                 if tile.number != None:
                     print(f'| {tile.number} |', end='')
                 else:
-                    print(f'  ', end='')
+                    print(f'    ', end='')
             
             print(f'\n{horizontal_line}')
 
@@ -687,43 +746,43 @@ def example():
             'Grain': 7,
             'Sheep': 7,
             'Gold': 2,
-            'Desert': 1,
-            'Sea': 23,
+            'Sea': 24,
         }
     main_island_numbers = {
         '2': 1, 
-        '3': 2, 
-        '4': 2, 
-        '5': 2, 
-        '6': 2, 
-        '8': 2, 
-        '9': 2, 
-        '10': 2, 
-        '11': 2, 
+        '3': 1, 
+        '4': 1, 
+        '5': 1, 
+        '6': 1, 
+        '8': 1, 
+        '9': 1, 
+        '10': 1, 
+        '11': 1, 
         '12': 1, 
     }
     small_islands_numbers = {
-        '3': 2, 
-        '4': 2, 
+        '2': 1, 
+        '3': 3, 
+        '4': 3, 
         '5': 3, 
-        '6': 2, 
-        '8': 2, 
+        '6': 3, 
+        '8': 3, 
         '9': 3, 
-        '10': 2, 
-        '11': 2,  
+        '10': 3, 
+        '11': 3,  
+        '12': 1,  
     }
     three_four_player_resources = {
-        'Brick': 3,
-        'Wood': 4,
-        'Ore': 3,
-        'Grain': 4,
-        'Sheep': 4,
-        'Desert': 1,
+        'Brick': 2,
+        'Wood': 2,
+        'Ore': 2,
+        'Grain': 2,
+        'Sheep': 2,
         }
 
 
     board = SeafarerIslands(9, 5, extension_and_seafarers_resources, three_four_player_resources, 
-    main_island_numbers, small_islands_numbers, 1, False, (5, 3))
+    main_island_numbers, small_islands_numbers, 1, True, (4, 3), False)
     board.print_resources()
     board.print_numbers()
 
