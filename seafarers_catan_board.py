@@ -83,7 +83,10 @@ class SeafarerIslands(CatanIsland):
                 '11', 
                 '3',          
             ]
-        self.number_placement_order = [
+        if len(main_island_numbers_dict) < 10:
+            self.main_island_number_placement_order = deque(main_island_numbers_dict.keys())
+        else:
+            self.main_island_number_placement_order = [
                 '8', 
                 '12', 
                 '2',
@@ -119,6 +122,7 @@ class SeafarerIslands(CatanIsland):
         self.diff = self.max_width - self.min_width
         self.vertical = (self.diff * 2) + 1
         self.horizontal = self.max_width + (self.max_width - 1)
+        self.dead_tiles = ['Desert', 'Sea', None]
 
         self.island = self._create_island()
 
@@ -375,8 +379,6 @@ class SeafarerIslands(CatanIsland):
                             resources_dict.pop(resource)
                             resources.pop(resource_indx)
 
-
-
                     elif adj_count > 5:
                         for tile in island:
                             # This prevents sea tiles from being moved around
@@ -391,6 +393,8 @@ class SeafarerIslands(CatanIsland):
                         # Reset the island back to an empty list
                         island = []
                         if remaining_land_tiles > 0:
+                            tiles = [tile for tile in tiles if tile.resource == None]
+                            tiles_queue = deque(tiles)
                             tile = tiles_queue.popleft()
                         else:
                             island_finished = True
@@ -464,10 +468,6 @@ class SeafarerIslands(CatanIsland):
                         if tile not in self.small_islands_tiles_by_resource[tile.resource]:
                             self.small_islands_tiles_by_resource[tile.resource].append(tile)
 
-
-
-        self.print_resources()
-
     def _check_adjacent_tiles(self, tile, number, resources):
         """
         Checks adjacent tiles for the proposed tile 
@@ -531,7 +531,6 @@ class SeafarerIslands(CatanIsland):
         # Check if three tile sum is greater than 12 or
         # less than 4
         if three_tile_sum > 12 or three_tile_sum < 4:
-            print(three_tile_sum)
             return False
         return True
 
@@ -544,8 +543,14 @@ class SeafarerIslands(CatanIsland):
         # Have number tokens on them.
         main_island_tiles = [tile for tile in self.main_island_position_dict.values() if tile.resource not in dead_tiles]
         resources = [resource for resource in self.main_island_tiles_by_resource.keys() if resource not in dead_tiles]
+        shuffle(resources)
         resources_queue = deque(resources)
-        numbers_queue = deque(self.number_placement_order)
+        numbers = [n for n in numbers_dict.keys()]
+        for x in range(10):
+            n_shuff = randint(0, len(numbers) - 1)
+            numbers = numbers[n_shuff:] + numbers[:n_shuff]
+        numbers_queue = deque(numbers)
+        # numbers_queue = deque(self.main_island_number_placement_order)
         
         count = 0
 
@@ -554,8 +559,17 @@ class SeafarerIslands(CatanIsland):
             count += 1  
             # Once the count reaches a certian threshold,
             # remove all the number and points from the tiles
-            if count >= 1000:
+            if count >= 250:
                 numbers_dict, numbers_queue = self._reset_tile_numbers(main_island_tiles, numbers_dict, numbers_queue)
+                # Shuffle the resources_queue and numbers_queue so as not to run into the same placing order problem
+                numbers = [n for n in numbers_dict.keys()]
+                for x in range(10):
+                    r_shuff = randint(0, len(resources) - 1)
+                    n_shuff = randint(0, len(numbers) - 1)
+                    resources = resources[r_shuff:] + resources[:r_shuff]
+                    numbers = numbers[n_shuff:] + numbers[:n_shuff]
+                resources_queue = deque(resources)
+                numbers_queue = deque(numbers)
                 count = 0
                 
             # Go through the resources and keep the number until that number is used up
@@ -602,7 +616,6 @@ class SeafarerIslands(CatanIsland):
             # If one of the tile checks is False 
             # start over from scratch
             if three_tile_sum_check == False:
-                # self.print_numbers()
                 numbers_dict, numbers_queue = self._reset_tile_numbers(main_island_tiles, numbers_dict, numbers_queue)
                 self._place_numbers_by_resource_main_island(numbers_dict)
 
@@ -683,7 +696,6 @@ class SeafarerIslands(CatanIsland):
             # If one of the tile checks is False 
             # start over from scratch
             if three_tile_sum_check == False:
-                self.print_numbers()
                 numbers_dict, numbers_queue = self._reset_tile_numbers(small_islands_tiles, numbers_dict, numbers_queue)
                 self._place_numbers_by_resource_smaller_islands(numbers_dict)
 

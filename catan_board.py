@@ -112,6 +112,7 @@ class CatanIsland:
         self.diff = self.max_width - self.min_width
         self.vertical = (self.diff * 2) + 1
         self.horizontal = self.max_width + (self.max_width - 1)
+        self.dead_tiles = ['Desert', 'Sea', None]
 
         # Create the island:
         self.island = self._create_island()
@@ -307,10 +308,6 @@ class CatanIsland:
                                 resources_dict.pop(tile.resource)
                                 resources.remove(tile.resource)
                 i += 1 
-                
-                
-                
-
 
         tiles = [tile for tile in self.position_dict.values()]
         tiles_queue = deque(tiles)   
@@ -456,7 +453,7 @@ class CatanIsland:
         # Create a list and then a queue of resources to go through until all the resources
         # Have number tokens on them.
         all_tiles = [tile for tile in self.position_dict.values() if tile.resource not in dead_tiles]
-        resources = [resource for resource in self.tiles_by_resource.keys()]
+        resources = [resource for resource in self.tiles_by_resource.keys() if resource not in dead_tiles]
         resources_queue = deque(resources)
         numbers_queue = deque(self.number_placement_order)
         
@@ -585,7 +582,7 @@ class CatanIsland:
         Calculates how many points are allocated to each resource.
         (For determining how balanced the board is.)
         """
-        tiles = [tile for tile in self.position_dict.values() if tile.resource != 'Desert']
+        tiles = [tile for tile in self.position_dict.values() if tile.resource not in self.dead_tiles and tile.resource != 'Gold']
         tppr = self.total_points_per_resource
         for tile in tiles:
 
