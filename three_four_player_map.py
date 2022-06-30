@@ -32,7 +32,7 @@ def generate_three_four_player_island():
             '12': 1, 
         }
         
-        catan = CatanIsland(5, 3, three_four_player_resources, three_four_player_numbers, True, 1)
+        catan = CatanIsland(5, 3, three_four_player_resources, three_four_player_numbers, True, 2)
         # Only print the resources and the numbers if the game is balanced
         game_balance = catan.calculate_points_per_resource()
         average_points = sum(game_balance.values()) / len(game_balance.values())
