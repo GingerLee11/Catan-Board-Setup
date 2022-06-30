@@ -175,7 +175,7 @@ class CatanIsland:
                     tile.bottom_left = grid[y + 1][x - 1]
                     # In the unlikely event that the minimum width is 1
                     if min_width == 1:
-                        continue
+                        pass
                     # Top of the board on the left corner
                     elif x == middle - y:
                         tile.right = grid[y][x + 2]
@@ -203,7 +203,7 @@ class CatanIsland:
                     tile.top_right = grid[y - 1][x + 1]
                     tile.top_left = grid[y - 1][x - 1]
                     if min_width == 1:
-                        continue
+                        pass
                     # Left corner on the bottom of the board
                     elif x == abs(middle - y):
                         tile.right = grid[y][x + 2]
@@ -694,14 +694,23 @@ class Test(unittest.TestCase):
         None, None, None, None, None, 
     ]
 
-
     seafarers_w_ext_board_pieces = [l_exp, r_exp, t_l_exp, t_r_exp, b_l_exp, b_r_exp]
+
+    l_exp = [None, None, 'B0', None]
+    r_exp = [None, 'B2', None, None]
+    t_l_exp = [None, None, 'A1', 'B0']
+    t_r_exp = [None, 'A1', None, 'B2']
+    b_l_exp = ['B0', None, 'C1', None]
+    b_r_exp = ['B2', 'C1', None, None]
+
+    really_small_island_test = [l_exp, r_exp, t_l_exp, t_r_exp, b_l_exp, b_r_exp]
 
     tests = [
         (5, 3, three_four_player_test), 
         (3, 2, small_test_island),
         (6, 3, five_six_player_test),
         (9, 5, seafarers_w_ext_board_pieces),
+        (2, 1, really_small_island_test),
     ]
 
     def generate_catan_board(self, max_width, min_width):
@@ -718,7 +727,7 @@ class Test(unittest.TestCase):
             for actual, left, right, top_left, top_right, bottom_left, bottom_right in zip(actual_tiles, expected[0], expected[1], 
             expected[2], expected[3], expected[4], expected[5]):
                 
-                # print(actual.pos)
+                print(actual.pos)
 
                 if actual.left != None:
                     assert actual.left.pos == left

@@ -13,7 +13,9 @@ class SeafarerIslands(CatanIsland):
     
     def __init__(self, max_width, min_width, 
             resource_dict, main_island_resources, main_island_numbers_dict, small_islands_numbers_dict, 
-            adj_resource_limit=2, main_island_center=False, main_island_dimensions=(5, 3), main_island_desert_center=True):
+            adj_resource_limit=2, main_island_center=False, main_island_dimensions=(5, 3), main_island_desert_center=True,
+            num_islands=4
+            ):
         
         # Constants
         self.letters = list(ascii_uppercase)
@@ -129,7 +131,8 @@ class SeafarerIslands(CatanIsland):
         if resource_dict != {}:
             self._place_resources(resource_dict, main_island_resources, 
                 adj_resource_limit,
-                main_island_center, main_island_dimensions, main_island_desert_center)
+                main_island_center, main_island_dimensions, main_island_desert_center, 
+                num_islands)
         if main_island_numbers_dict != {} and small_islands_numbers_dict != {}:
             self._place_numbers_by_resource_main_island(main_island_numbers_dict)
             self._place_numbers_by_resource_smaller_islands(small_islands_numbers_dict)
