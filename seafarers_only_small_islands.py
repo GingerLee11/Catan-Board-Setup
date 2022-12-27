@@ -55,7 +55,7 @@ def generate_all_small_islands():
             }
 
         board = SeafarerIslands(9, 5, extension_and_seafarers_resources, three_four_player_resources, 
-        main_island_numbers, small_islands_numbers, 1, False, (3, 2), False, 7)
+        main_island_numbers, small_islands_numbers, 1, False, (3, 2), False, 4)
 
         game_balance = board.calculate_points_per_resource()
         average_points = sum(game_balance.values()) / len(game_balance.values())

@@ -9,7 +9,7 @@ def generate_4_by_3_main_island_center_map():
 
     # The lower this number is the more balanced the board will be; however, 
     # the number of possible boards will also be lower
-    BALANCE_PARAMETER = 5
+    BALANCE_PARAMETER = 4
     total_diff = 100
     while total_diff > BALANCE_PARAMETER:
         # Test with a 9 max, 5 min board
